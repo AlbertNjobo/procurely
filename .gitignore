@@ -32,10 +32,11 @@ out/
 # ==============================================================================
 # Firebase-specific
 # ==============================================================================
-# Firebase CLI cache/hosting deploy artifacts and debug logs.
+# Firebase CLI cache/hosting deploy artifacts, configs, and debug logs.
 .firebase/
 firebase-debug.log
 ui-debug.log
+firebase-applet-config.json
 
 # ==============================================================================
 # TypeScript
