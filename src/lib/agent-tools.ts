@@ -635,3 +635,58 @@ export type CreateSupplierArgs = {
 export type SearchProductImagesArgs = {
   query: string;
 };
+
+export type RecallMemoryArgs = {
+  query: string;
+  memory_type?: "preference" | "decision" | "fact" | "pattern" | "all";
+};
+
+export type StoreMemoryArgs = {
+  content: string;
+  memory_type: "preference" | "decision" | "fact" | "pattern";
+  metadata?: Record<string, any>;
+};
+
+export type CreateRfqArgs = {
+  title: string;
+  description: string;
+  supplier_ids: string[];
+  due_date?: string;
+  budget_range?: string;
+};
+
+export type SelectBidArgs = {
+  rfq_id: string;
+  bid_id: string;
+  supplier_id: string;
+  amount: string;
+  reasoning?: string;
+};
+
+export type CreatePurchaseOrderArgs = {
+  requisition_id?: string;
+  supplier_id: string;
+  items: Array<{ name: string; quantity: number; unit_price: string }>;
+  total_amount: string;
+};
+
+export type TrackDeliveryArgs = {
+  po_id: string;
+};
+
+export type ProcessPaymentArgs = {
+  po_id: string;
+  invoice_id: string;
+  amount: string;
+};
+
+export type ProcessInvoiceArgs = {
+  invoice_data: string;
+  file_type: "image" | "pdf";
+};
+
+export type DelegateToSpecialistArgs = {
+  specialist: "risk_analyst" | "bid_optimizer" | "compliance_checker";
+  task: string;
+  context?: Record<string, any>;
+};
