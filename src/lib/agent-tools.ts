@@ -341,6 +341,48 @@ export const agentTools: ChatCompletionTool[] = [
     }
   },
   // ============================================================================
+  // Interactive Qualification Tools
+  // ============================================================================
+  {
+    type: "function",
+    function: {
+      name: "present_qualification_questions",
+      description: "Present qualification questions with selectable option chips during the Qualifying phase. Each question has predefined options AND a custom input option. Use this INSTEAD of asking questions in plain text when gathering requirements (budget, use case, screen size, etc.).",
+      parameters: {
+        type: "object",
+        properties: {
+          questions: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                question_id: { type: "string", description: "Unique ID for the question (e.g., 'budget')" },
+                question_text: { type: "string", description: "The question to ask (e.g., 'What is your budget range?')" },
+                options: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      value: { type: "string", description: "The value sent to the agent when selected (e.g., '$1,000-$1,500')" },
+                      label: { type: "string", description: "Display label for the chip (e.g., '$1K - $1.5K')" },
+                      icon: { type: "string", description: "Optional emoji or icon for the chip" }
+                    },
+                    required: ["value", "label"]
+                  },
+                  description: "3-5 selectable options"
+                },
+                allow_custom: { type: "boolean", description: "Whether to allow custom text input (default: true)" },
+                custom_placeholder: { type: "string", description: "Placeholder text for custom input" }
+              },
+              required: ["question_id", "question_text", "options"]
+            }
+          }
+        },
+        required: ["questions"]
+      }
+    }
+  },
+  // ============================================================================
   // Memory Tools - Cross-session agent memory
   // ============================================================================
   {
@@ -590,6 +632,127 @@ export const agentTools: ChatCompletionTool[] = [
         required: ["specialist", "task"]
       }
     }
+  },
+  // ============================================================================
+  // AI-Driven Vendor Negotiation Tools
+  // ============================================================================
+  {
+    type: "function",
+    function: {
+      name: "negotiate_with_vendor",
+      description: "Autonomously negotiate pricing and terms with a vendor. The agent researches market prices, compares quotes, and proposes counter-offers based on target budgets. Use this when the user wants to get the best deal from a specific vendor.",
+      parameters: {
+        type: "object",
+        properties: {
+          vendor_id: {
+            type: "string",
+            description: "The vendor/supplier ID to negotiate with"
+          },
+          item_description: {
+            type: "string",
+            description: "What is being negotiated (e.g., 'Dell XPS 15 laptops x10')"
+          },
+          target_price: {
+            type: "string",
+            description: "The target price or budget (e.g., '$12,000' or 'under $1500 per unit')"
+          },
+          vendor_initial_price: {
+            type: "string",
+            description: "The vendor's initial quoted price (if known)"
+          },
+          max_rounds: {
+            type: "number",
+            description: "Maximum negotiation rounds (default: 3)"
+          },
+          terms: {
+            type: "array",
+            items: { type: "string" },
+            description: "Additional terms to negotiate (e.g., 'payment terms', 'warranty', 'delivery timeline')"
+          }
+        },
+        required: ["vendor_id", "item_description", "target_price"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "research_market_price",
+      description: "Research current market pricing for a product or service. Returns competitive pricing data to inform negotiation strategy.",
+      parameters: {
+        type: "object",
+        properties: {
+          product: {
+            type: "string",
+            description: "The product or service to research (e.g., 'Dell XPS 15 9530')"
+          },
+          quantity: {
+            type: "number",
+            description: "Quantity needed (for volume pricing research)"
+          },
+          category: {
+            type: "string",
+            description: "Product category (e.g., 'laptops', 'software licenses', 'cloud services')"
+          }
+        },
+        required: ["product"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "execute_workflow",
+      description: "Execute a procurement workflow step based on the current workflow graph. Routes requisitions through the designed flowchart (trigger → condition → action → routing).",
+      parameters: {
+        type: "object",
+        properties: {
+          workflow_id: {
+            type: "string",
+            description: "The workflow ID (or 'default' for the standard workflow)"
+          },
+          requisition_id: {
+            type: "string",
+            description: "The requisition ID to route through the workflow"
+          },
+          current_node_id: {
+            type: "string",
+            description: "The current node in the workflow (for resuming execution)"
+          },
+          context: {
+            type: "object",
+            description: "Context data for the workflow (amount, department, etc.)"
+          }
+        },
+        required: ["requisition_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "evaluate_workflow_condition",
+      description: "Evaluate a condition node in the workflow graph. Returns true/false based on the condition parameters and requisition data.",
+      parameters: {
+        type: "object",
+        properties: {
+          condition_type: {
+            type: "string",
+            enum: ["amount_threshold", "department_match", "risk_level", "category_match", "custom"],
+            description: "The type of condition to evaluate"
+          },
+          condition_params: {
+            type: "object",
+            description: "Parameters for the condition (e.g., {threshold: 10000, operator: '>'})"
+          },
+          requisition_data: {
+            type: "object",
+            description: "The requisition data to evaluate against"
+          }
+        },
+        required: ["condition_type", "requisition_data"]
+      }
+    }
   }
 ];
 
@@ -689,4 +852,32 @@ export type DelegateToSpecialistArgs = {
   specialist: "risk_analyst" | "bid_optimizer" | "compliance_checker";
   task: string;
   context?: Record<string, any>;
+};
+
+export type NegotiateWithVendorArgs = {
+  vendor_id: string;
+  item_description: string;
+  target_price: string;
+  vendor_initial_price?: string;
+  max_rounds?: number;
+  terms?: string[];
+};
+
+export type ResearchMarketPriceArgs = {
+  product: string;
+  quantity?: number;
+  category?: string;
+};
+
+export type ExecuteWorkflowArgs = {
+  workflow_id?: string;
+  requisition_id: string;
+  current_node_id?: string;
+  context?: Record<string, any>;
+};
+
+export type EvaluateWorkflowConditionArgs = {
+  condition_type: "amount_threshold" | "department_match" | "risk_level" | "category_match" | "custom";
+  condition_params: Record<string, any>;
+  requisition_data: Record<string, any>;
 };

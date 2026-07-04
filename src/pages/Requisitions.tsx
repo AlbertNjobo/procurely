@@ -588,28 +588,36 @@ export function Requisitions() {
         </DialogContent>
       </Dialog>
 
-      <AgentDialog 
+      <AgentDialog
         open={isAgentDialogOpen}
         onOpenChange={setIsAgentDialogOpen}
         contextType="intake"
         onSuccess={async (data) => {
           if (!auth.currentUser) return;
           try {
-            // Human in the loop AI Verification
-            setNewRequestData({
-              title: data.title || '',
-              purpose: 'Internal Use',
+            const amount = parseFloat(data.amount?.replace(/[^0-9.-]+/g, '') || '0');
+            const newReq = {
+              title: data.title || 'AI Generated Request',
               category: data.department || 'Other',
-              items: '',
+              amount: amount,
+              date: new Date().toISOString().split('T')[0],
+              status: 'Draft',
+              purpose: data.description || '',
               reason: data.description || '',
-              totalAmount: data.amount?.replace(/[^0-9.-]+/g,"") || '',
-              costCenter: data.department || ''
-            });
-            toast.info('AI pre-filled the form. Please review and commit.');
+              totalAmount: amount,
+              createdBy: auth.currentUser.uid,
+              auditTrail: [{
+                action: 'Created via AI Agent',
+                actorId: auth.currentUser.uid,
+                timestamp: new Date().toISOString()
+              }]
+            };
+            await addDoc(collection(db, 'purchaseRequisitions'), newReq);
+            toast.success('Requisition created successfully!');
             setIsAgentDialogOpen(false);
           } catch (error) {
-            console.error("Error with AI pre-fill", error);
-            toast.error("Failed to process AI data");
+            console.error("Error creating requisition", error);
+            toast.error("Failed to create requisition");
           }
         }}
       />

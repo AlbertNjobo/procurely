@@ -83,6 +83,16 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   console.error('Firestore Error: ', JSON.stringify(errInfo));
 }
 
+export type AgentMemoryEntry = {
+  id: string;
+  userId: string;
+  type: "preference" | "decision" | "fact" | "pattern";
+  content: string;
+  metadata: Record<string, any>;
+  embedding?: number[];
+  createdAt: string;
+};
+
 type DataContextType = {
   intakes: IntakeRequest[];
   setIntakes: (intakes: IntakeRequest[]) => void;
@@ -100,6 +110,8 @@ type DataContextType = {
   invoices: Invoice[];
   procurementCatalog: any[];
   knowledgeBase: any[];
+  agentMemory: AgentMemoryEntry[];
+  addMemory: (entry: Omit<AgentMemoryEntry, 'id'>) => Promise<void>;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -118,6 +130,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [procurementCatalog, setProcurementCatalog] = useState<any[]>([]);
   const [knowledgeBase, setKnowledgeBase] = useState<any[]>([]);
+  const [agentMemory, setAgentMemory] = useState<AgentMemoryEntry[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -277,6 +290,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setKnowledgeBase(data);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'knowledgeBase'));
 
+    const memoryQuery = query(collection(db, 'agentMemory'), where("userId", "==", user.uid));
+    const unsubMemory = onSnapshot(memoryQuery, (snap) => {
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as AgentMemoryEntry));
+      setAgentMemory(data);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'agentMemory'));
+
     return () => {
       unsubIntakes();
       unsubSuppliers();
@@ -290,6 +309,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       unsubInvoices();
       unsubCatalog();
       unsubKb();
+      unsubMemory();
     };
   }, [user]);
 
@@ -329,10 +349,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const addMemory = async (entry: Omit<AgentMemoryEntry, 'id'>) => {
+    try {
+      if (!user) throw new Error("Not authenticated");
+      const docRef = doc(collection(db, 'agentMemory'));
+      await setDoc(docRef, { ...entry, id: docRef.id, userId: user.uid });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'agentMemory');
+    }
+  };
+
   // We keep setIntakes and setSuppliers for local state overriding if really needed,
   // but they shouldn't be used as the source of truth anymore.
   return (
-    <DataContext.Provider value={{ intakes, setIntakes, updateIntake, suppliers, setSuppliers, updateSupplier, spendMetrics, departmentSpendMetrics, purchaseRequisitions, rfqs, purchaseOrders, bids, goodsReceipts, invoices, procurementCatalog, knowledgeBase }}>
+    <DataContext.Provider value={{ intakes, setIntakes, updateIntake, suppliers, setSuppliers, updateSupplier, spendMetrics, departmentSpendMetrics, purchaseRequisitions, rfqs, purchaseOrders, bids, goodsReceipts, invoices, procurementCatalog, knowledgeBase, agentMemory, addMemory }}>
       {children}
     </DataContext.Provider>
   );

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Bot, User, Send, FileText, CheckCircle, Paperclip, Table as TableIcon, Activity, UserPlus, Upload, ChevronDown, ChevronUp, AlertCircle, Loader2, Mic, Square } from 'lucide-react';
+import { Bot, User, Send, FileText, CheckCircle, Paperclip, Table as TableIcon, Activity, UserPlus, Upload, ChevronDown, ChevronUp, AlertCircle, Loader2, Mic, Square, ListChecks } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '../lib/auth-context';
 import { useData } from '../lib/data-context';
@@ -20,7 +20,7 @@ import { UploadPromptCard } from '../components/agent/UploadPromptCard';
 import { SelectedSupplierCard } from '../components/agent/SelectedSupplierCard';
 import { ImpactAnalysisCard } from '../components/agent/ImpactAnalysisCard';
 
-type MessageType = 'text' | 'bid-matrix' | 'supplier-form' | 'process-timeline' | 'item-details' | 'upload-prompt' | 'selected-supplier' | 'impact-analysis' | 'approval';
+type MessageType = 'text' | 'bid-matrix' | 'supplier-form' | 'process-timeline' | 'item-details' | 'upload-prompt' | 'selected-supplier' | 'impact-analysis' | 'approval' | 'qualification-questions' | 'intake-confirmation';
 
 interface ToolCall {
   name: string;
@@ -33,6 +33,99 @@ interface Message {
   content: string;
   type?: MessageType;
   tool_calls?: ToolCall[];
+  qualificationData?: any[];
+}
+
+function QualificationQuestions({ questions, onSelect }: { questions: any[], onSelect: (text: string) => void }) {
+  const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+
+  const handleSelect = (questionId: string, value: string) => {
+    setSelectedAnswers(prev => ({ ...prev, [questionId]: value }));
+  };
+
+  const handleCustomSubmit = (questionId: string) => {
+    const customValue = customInputs[questionId];
+    if (customValue?.trim()) {
+      setSelectedAnswers(prev => ({ ...prev, [questionId]: customValue.trim() }));
+    }
+  };
+
+  const allAnswered = questions.every(q => selectedAnswers[q.question_id]);
+
+  const handleSubmitAll = () => {
+    const answers = questions.map(q => {
+      const answer = selectedAnswers[q.question_id];
+      return `${q.question_text}: ${answer}`;
+    }).join('\n');
+    onSelect(answers);
+  };
+
+  return (
+    <div className="mb-4 mt-2 space-y-4">
+      <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        <ListChecks className="h-4 w-4 text-blue-600" />
+        Quick Select Your Preferences
+      </h4>
+      {questions.map((q) => (
+        <div key={q.question_id} className="bg-white dark:bg-card border rounded-xl p-4 space-y-3">
+          <p className="font-medium text-sm">{q.question_text}</p>
+          <div className="flex flex-wrap gap-2">
+            {q.options.map((opt: any, i: number) => (
+              <button
+                key={i}
+                onClick={() => handleSelect(q.question_id, opt.value)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                  selectedAnswers[q.question_id] === opt.value
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-background hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 border-border'
+                }`}
+              >
+                {opt.icon && <span>{opt.icon}</span>}
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {q.allow_custom && selectedAnswers[q.question_id] && !q.options.find((o: any) => o.value === selectedAnswers[q.question_id]) && (
+            <div className="text-sm text-blue-600 bg-blue-50 rounded-lg px-3 py-2">
+              Custom: {selectedAnswers[q.question_id]}
+            </div>
+          )}
+          {q.allow_custom && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customInputs[q.question_id] || ''}
+                onChange={(e) => setCustomInputs(prev => ({ ...prev, [q.question_id]: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && customInputs[q.question_id]?.trim()) {
+                    handleCustomSubmit(q.question_id);
+                  }
+                }}
+                placeholder={q.custom_placeholder || "Type your own answer..."}
+                className="flex-1 text-sm border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <button
+                onClick={() => handleCustomSubmit(q.question_id)}
+                disabled={!customInputs[q.question_id]?.trim()}
+                className="text-xs px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 disabled:opacity-50 transition-colors"
+              >
+                Set
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+      {allAnswered && (
+        <button
+          onClick={handleSubmitAll}
+          className="w-full py-2.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-sm"
+        >
+          Confirm Selections & Continue
+        </button>
+      )}
+    </div>
+  );
 }
 
 function SuggestedItemsGrid({ items, onSelect }: { items: any[], onSelect: (text: string) => void }) {
@@ -317,6 +410,7 @@ function ExpandableBotMessage({ msg, renderCard, isStreaming, onSelect }: { msg:
       case 'selected-supplier': return 'Supplier Selection Confirmed';
       case 'impact-analysis': return 'Supplier Impact Analysis';
       case 'approval': return 'Approval Required';
+      case 'qualification-questions': return 'Select Your Preferences';
       default: return isStreaming ? 'Generating...' : 'Agent Response';
     }
   };
@@ -404,6 +498,23 @@ function ExpandableBotMessage({ msg, renderCard, isStreaming, onSelect }: { msg:
                     } catch (e) {}
                   }
 
+                  if (tool.name === 'present_qualification_questions') {
+                    // Try result first, fall back to arguments
+                    let questions = null;
+                    try {
+                      if (tool.result) {
+                        const qualData = JSON.parse(tool.result);
+                        if (qualData.questions) questions = qualData.questions;
+                      }
+                    } catch (e) {}
+                    if (!questions && tool.arguments?.questions) {
+                      questions = tool.arguments.questions;
+                    }
+                    if (questions && questions.length > 0) {
+                      return <QualificationQuestions key={idx} questions={questions} onSelect={onSelect} />;
+                    }
+                  }
+
                   if (tool.name === 'suggest_vendors' && tool.arguments?.vendors) {
                      return (
                         <div key={idx} className="mb-4 w-full space-y-4">
@@ -463,7 +574,7 @@ function ExpandableBotMessage({ msg, renderCard, isStreaming, onSelect }: { msg:
 
 export function AgentChat() {
   const { user } = useAuth();
-  const { intakes, procurementCatalog, knowledgeBase, suppliers, updateIntake } = useData();
+  const { intakes, procurementCatalog, knowledgeBase, suppliers, updateIntake, agentMemory, purchaseRequisitions } = useData();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
 
@@ -735,17 +846,36 @@ export function AgentChat() {
     try {
       let apiMessages = messages.filter(m => m.type === 'text' || !m.type).concat(userMessage).map(m => ({ role: m.role, parts: [{ text: m.content }] }));
       
+      // Load workflow from localStorage (saved by WorkflowDesigner)
+      let workflowNodes: any[] = [];
+      let workflowEdges: any[] = [];
+      try {
+        const savedWorkflow = localStorage.getItem('workflow-designer-autosave');
+        if (savedWorkflow) {
+          const parsed = JSON.parse(savedWorkflow);
+          workflowNodes = parsed.nodes || [];
+          workflowEdges = parsed.edges || [];
+        }
+      } catch (e) {
+        console.warn('Failed to load workflow from localStorage:', e);
+      }
+
       const response = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           messages: apiMessages,
           context: {
             intakes,
             procurementCatalog,
             suppliers,
+            purchaseRequisitions,
+            agentMemory: agentMemory.slice(0, 20),
+            workflowNodes,
+            workflowEdges,
+            userId: user?.uid,
             knowledgeBase: useContext ? knowledgeBase : undefined,
-            kbChunks: useContext ? knowledgeBase.flatMap((doc: any) => 
+            kbChunks: useContext ? knowledgeBase.flatMap((doc: any) =>
               (doc.chunks || []).map((c: any) => ({ ...c, docId: doc.id, title: doc.title }))
             ) : undefined
           }
@@ -789,28 +919,27 @@ export function AgentChat() {
                   result: ""
                 });
               } else if (parsed.type === "tool_result") {
-                const targetTool = currentToolCalls.find(t => t.name === parsed.name && !t.result);
+                // Find the LAST tool call with matching name that hasn't received a result yet
+                const targetTool = [...currentToolCalls].reverse().find(t => t.name === parsed.name && !t.result);
                 if (targetTool) {
                   targetTool.result = parsed.result;
                   
-                  // Intercept create_intake_request to save to Firestore
+                  // Intercept create_intake_request to show confirmation card
                   if (parsed.name === 'create_intake_request' && targetTool.arguments) {
                     try {
-                      const args = JSON.parse(targetTool.arguments);
-                      const newId = `REQ-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-                      updateIntake(newId, {
-                        id: newId,
+                      const args = typeof targetTool.arguments === 'string'
+                        ? JSON.parse(targetTool.arguments)
+                        : targetTool.arguments;
+                      // Store intake data on the message for the confirmation card
+                      currentModelMessage.type = 'intake-confirmation';
+                      (currentModelMessage as any).pendingIntake = {
                         title: args.title,
                         department: args.department,
                         amount: args.amount,
                         description: args.description,
-                        status: 'Draft',
-                        date: new Date().toISOString().split('T')[0],
-                        supplier: '',
-                      });
-                      toast.success(`Purchase requisition ${newId} created successfully`);
+                      };
                     } catch (e) {
-                      console.error("Error creating intake request from tool call", e);
+                      console.error("Error parsing intake request args", e);
                     }
                   }
 
@@ -823,9 +952,33 @@ export function AgentChat() {
                       }
                     } catch (e) {}
                   }
+
+                  // Intercept present_qualification_questions to show interactive chips
+                  if (parsed.name === 'present_qualification_questions') {
+                    try {
+                      const qualData = JSON.parse(targetTool.result || parsed.result || '');
+                      if (qualData.type === 'qualification_questions') {
+                        currentModelMessage.type = 'qualification-questions';
+                        currentModelMessage.qualificationData = qualData.questions;
+                      }
+                    } catch (e) {}
+                  }
                 }
               } else if (parsed.type === "final") {
-                currentModelMessage.content = parsed.response;
+                // Don't overwrite content if interactive elements are showing
+                const hasInteractiveTools = currentToolCalls.some(t =>
+                  t.name === 'present_qualification_questions' ||
+                  t.name === 'suggest_procurement_items' ||
+                  t.name === 'ask_form_questions' ||
+                  t.name === 'suggest_vendors' ||
+                  t.name === 'create_intake_request'
+                );
+                if (!hasInteractiveTools && currentModelMessage.type !== 'qualification-questions' && currentModelMessage.type !== 'intake-confirmation') {
+                  currentModelMessage.content = parsed.response;
+                } else if (parsed.response && currentModelMessage.content !== parsed.response) {
+                  // Append text content after interactive elements
+                  currentModelMessage.content = (currentModelMessage.content || '') + '\n\n' + parsed.response;
+                }
                 // Update full tool calls if necessary
                 if (parsed.tool_calls && parsed.tool_calls.length > 0) {
                   currentModelMessage.tool_calls = parsed.tool_calls;
@@ -867,6 +1020,82 @@ export function AgentChat() {
       case 'upload-prompt': return <UploadPromptCard />;
       case 'selected-supplier': return <SelectedSupplierCard />;
       case 'impact-analysis': return <ImpactAnalysisCard />;
+      case 'intake-confirmation': {
+        const pending = (msg as any).pendingIntake;
+        if (!pending) return null;
+        return (
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 rounded-xl p-4 mt-2">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <h4 className="font-semibold text-blue-900 dark:text-blue-100">Confirm Purchase Requisition</h4>
+            </div>
+            <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">Please review the details before creating this requisition:</p>
+            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 mb-4 text-sm space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Title:</span>
+                <span className="font-medium">{pending.title}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Department:</span>
+                <span className="font-medium">{pending.department}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount:</span>
+                <span className="font-medium">{pending.amount}</span>
+              </div>
+              {pending.description && (
+                <div className="pt-2 border-t">
+                  <span className="text-muted-foreground text-xs">Description:</span>
+                  <p className="text-xs mt-1">{pending.description}</p>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={async () => {
+                  try {
+                    const { addDoc, collection: fbCollection } = await import('firebase/firestore');
+                    const newReq = {
+                      title: pending.title,
+                      category: pending.department || 'General',
+                      amount: parseFloat((pending.amount || '0').replace(/[^0-9.]/g, '')) || 0,
+                      date: new Date().toISOString().split('T')[0],
+                      status: 'Draft',
+                      purpose: pending.description || '',
+                      reason: pending.description || '',
+                      totalAmount: parseFloat((pending.amount || '0').replace(/[^0-9.]/g, '')) || 0,
+                      createdBy: user?.uid || '',
+                      auditTrail: [{
+                        action: 'Created via AI Agent',
+                        actorId: user?.uid || '',
+                        timestamp: new Date().toISOString()
+                      }]
+                    };
+                    const docRef = await addDoc(fbCollection(db, 'purchaseRequisitions'), newReq);
+                    toast.success(`Requisition ${docRef.id} created successfully`);
+                    handleSend(`Requisition ${docRef.id} created. What would you like to do next?`);
+                  } catch (e) {
+                    console.error("Error creating requisition:", e);
+                    toast.error("Failed to create requisition");
+                  }
+                }}
+              >
+                <CheckCircle className="h-4 w-4 mr-1" /> Confirm & Create
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-200 text-red-700 hover:bg-red-50"
+                onClick={() => handleSend("I changed my mind. Cancel this requisition.")}
+              >
+                <AlertCircle className="h-4 w-4 mr-1" /> Cancel
+              </Button>
+            </div>
+          </div>
+        );
+      }
       case 'approval': {
         // Find the request_approval tool call in this message
         const approvalTool = msg.tool_calls?.find(t => t.name === 'request_approval');
@@ -920,7 +1149,7 @@ export function AgentChat() {
   };
 
   return (
-    <div className="p-0 md:p-4 flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-2rem)] max-w-6xl mx-auto">
+    <div className="p-0 md:p-4 flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-2rem)]">
       <div className="mb-4 hidden md:block">
         <h1 className="text-2xl font-bold tracking-tight">Atlas Agentic Platform</h1>
         <p className="text-muted-foreground mt-1">Intake Orchestration, Autonomous Sourcing & Negotiation</p>

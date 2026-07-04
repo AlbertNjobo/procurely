@@ -241,7 +241,7 @@ Respond in valid JSON format with the following keys:
 }`;
 
     const response = await openai.chat.completions.create({
-      model: "qwen3.7-plus",
+      model: "qwen3.5-plus",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.1,
       response_format: {
@@ -307,7 +307,7 @@ app.post("/api/agent/responses", async (req, res) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "qwen3.7-plus", // qwen3.7-plus supports responses API
+        model: "qwen3.5-plus", // qwen3.5-plus supports responses API
         input: input, // Responses API expects 'input' string or structured message array
         tools: tools || [
           { type: "web_search" },
@@ -428,9 +428,11 @@ app.post("/api/agent/chat", async (req, res) => {
         content: [
           {
             type: "text",
-            text: `You are Atlas, an AI Autopilot Procurement Agent powered by Qwen Cloud. 
+            text: `You are Atlas, an AI Autopilot Procurement Agent powered by Qwen Cloud.
 You help users with Intake Management, Supplier Management, Risk and Compliance, and full Procure-to-Pay workflows.
 Be professional, structured, and helpful. You analyze supplier forms and generate bid matrix analysis when requested.
+
+MANDATORY RULE: When asking the user qualification questions (budget, use case, preferences), you MUST call the present_qualification_questions tool. NEVER ask qualification questions in plain text. The tool renders interactive selectable chips for the user.
 
 CAPABILITIES:
 - Search the web for products, suppliers, and pricing information
@@ -439,11 +441,23 @@ CAPABILITIES:
 - Process invoices using OCR
 - Delegate complex tasks to specialist sub-agents
 - Remember user preferences across sessions via agent memory
+- AUTONOMOUSLY NEGOTIATE prices and terms with vendors
+- Execute custom workflows designed in the Workflow Designer
+- Research market prices to inform negotiation strategy
 
 CRITICAL WORKFLOW FOR PRODUCT RECOMMENDATIONS (e.g. Laptops, Hardware):
-PHASE 1 - QUALIFYING: If the user asks for a product but hasn't specified exact requirements, DO NOT search for images or use the form tool yet. Instead, ask 2-3 conversational questions (like ChatGPT does) to narrow down their needs (e.g., "What is your budget?", "Do you prefer a 14-inch or 16-inch screen?", "What will you be using it for?"). Wait for their reply.
-PHASE 2 - RECOMMENDATION: Once you have their criteria, search the web to find 2-3 SPECIFIC product models (e.g., "HP EliteBook 845 G11"). Recommend them to the user. Use the \`suggest_procurement_items\` tool to present these specific models as selection cards. You MUST wait for them to choose one.
-PHASE 3 - INTAKE FORM: Only AFTER the user has explicitly selected a specific product model, you should proceed to gather the administrative details (department, budget, justification) using the \`ask_form_questions\` tool.
+
+RULE: You may only call ONE tool per response. Never call multiple tools in the same turn.
+
+PHASE 1 - QUALIFYING: If the user asks for a product but hasn't specified exact requirements, call ONLY \`present_qualification_questions\`. Do NOT call search_procurement_catalog, research_market_price, or any other tool in the same response. Just present the questions and STOP.
+
+PHASE 2 - RECOMMENDATION: ONLY after the user has confirmed their answers to the qualification questions (you receive their selections as a new user message), call ONLY \`suggest_procurement_items\` or \`research_market_price\`. Do NOT call other tools. Present the products and STOP. Say "Let me know which one you'd like!" and WAIT.
+
+PHASE 3 - INTAKE FORM: ONLY AFTER the user has explicitly selected a product, call ONLY \`ask_form_questions\` to gather department, budget, and justification.
+
+PHASE 4 - CONFIRMATION: After the form is submitted, call ONLY \`create_intake_request\`. Present the confirmation card. STOP.
+
+NEVER call multiple tools in one response. NEVER skip phases. NEVER proceed without user input between phases.
 
 END-TO-END PROCUREMENT WORKFLOW:
 When a user wants to procure something, you can autonomously handle the full cycle:
@@ -460,6 +474,22 @@ For complex analysis, delegate to specialist sub-agents:
 - risk_analyst: Deep supplier risk assessment
 - bid_optimizer: Comparative bid analysis and scoring
 - compliance_checker: Policy and regulation validation
+
+AI-DRIVEN VENDOR NEGOTIATION:
+When negotiating with vendors:
+1. Research market prices first using research_market_price
+2. Use negotiate_with_vendor to develop a counter-offer strategy
+3. Present the negotiation script to the user for approval
+4. The agent can negotiate across multiple rounds, adjusting strategy based on vendor responses
+Always use request_approval before finalizing any negotiated deal.
+
+WORKFLOW ENGINE INTEGRATION:
+When processing requisitions:
+1. Use execute_workflow to route requisitions through the designed workflow
+2. Use evaluate_workflow_condition to evaluate condition nodes
+3. The workflow graph from WorkflowDesigner is available in context
+4. The agent follows the graph: trigger → condition → action → routing
+Always log which workflow path was taken for audit purposes.
 
 IMPORTANT: NEVER combine Qualifying, Recommending, and Intake Form phases. You MUST STOP and wait for the user's response between stages.${memoryText}${kbText}`,
             cache_control: { type: "ephemeral" }
@@ -484,7 +514,7 @@ IMPORTANT: NEVER combine Qualifying, Recommending, and Intake Form phases. You M
       const toolCallsAccumulator: Record<number, any> = {};
 
       const stream = await openai.chat.completions.create({
-        model: "qwen3.7-plus",
+        model: "qwen3.5-plus",
         messages: currentMessages,
         tools: agentTools as any,
         stream: true,
@@ -594,7 +624,7 @@ IMPORTANT: NEVER combine Qualifying, Recommending, and Intake Form phases. You M
             try {
               const supplier = (context?.suppliers || []).find((s: any) => s.id === args.supplier_id) || { name: args.supplier_id, category: 'Unknown' };
               const riskResponse = await openai!.chat.completions.create({
-                model: "qwen3.7-plus",
+                model: "qwen3.5-plus",
                 messages: [{
                   role: "user",
                   content: `You are a procurement risk analyst. Evaluate the following supplier and provide a risk assessment.
@@ -634,7 +664,7 @@ Respond in valid JSON with keys: risk_score, status, checks (array of strings), 
               const suppliers = (context?.suppliers || []).filter((s: any) => args.supplier_ids?.includes(s.id));
               const intake = (context?.intakes || []).find((i: any) => i.id === args.intake_id) || { title: 'Unknown', amount: 'N/A', description: 'N/A' };
               const bidResponse = await openai!.chat.completions.create({
-                model: "qwen3.7-plus",
+                model: "qwen3.5-plus",
                 messages: [{
                   role: "user",
                   content: `You are a procurement bid analyst. Generate a comparative bid matrix analysis.
@@ -690,7 +720,7 @@ Respond in valid JSON with keys: comparison (array), winning_supplier, reasoning
                       "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                      model: "qwen3.7-plus",
+                      model: "qwen3.5-plus",
                       input: `Find product images for: ${item.image_query}`,
                       tools: [{ type: "web_search_image" }]
                     })
@@ -731,7 +761,7 @@ Respond in valid JSON with keys: comparison (array), winning_supplier, reasoning
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                  model: "qwen3.7-plus",
+                  model: "qwen3.5-plus",
                   input: `Find product images for: ${args.query}`,
                   tools: [{ type: "web_search_image" }]
                 })
@@ -786,7 +816,22 @@ Respond in valid JSON with keys: comparison (array), winning_supplier, reasoning
               action_type: args.action_type,
               message: `✅ Action confirmed: ${args.action_type}`
             });
-          } else if (tc.name === 'recall_memory') {
+          } else if (tc.name === 'present_qualification_questions') {
+            // Interactive qualification: return structured questions for the UI to render as chips
+            result = JSON.stringify({
+              type: "qualification_questions",
+              questions: (args.questions || []).map((q: any) => ({
+                question_id: q.question_id,
+                question_text: q.question_text,
+                options: (q.options || []).map((opt: any) => ({
+                  value: opt.value,
+                  label: opt.label,
+                  icon: opt.icon || null
+                })),
+                allow_custom: q.allow_custom !== false,
+                custom_placeholder: q.custom_placeholder || "Type your answer..."
+              }))
+            });
             // Search agent memory for relevant past interactions
             const memories = context?.agentMemory || [];
             let filtered = memories;
@@ -896,7 +941,7 @@ Respond in valid JSON with keys: comparison (array), winning_supplier, reasoning
             // Use Qwen vision to extract invoice data
             try {
               const visionResponse = await openai!.chat.completions.create({
-                model: "qwen3.7-plus",
+                model: "qwen3.5-plus",
                 messages: [{
                   role: "user",
                   content: [
@@ -961,6 +1006,244 @@ Respond in valid JSON with keys: comparison (array), winning_supplier, reasoning
                 fallback: "Proceeding with main agent analysis."
               });
             }
+          } else if (tc.name === 'negotiate_with_vendor') {
+            // AI-Driven Vendor Negotiation: Research market prices and negotiate
+            try {
+              const vendor = (context?.suppliers || []).find((s: any) => s.id === args.vendor_id) || { name: args.vendor_id, category: 'Unknown' };
+              const targetPrice = parseFloat(args.target_price.replace(/[^0-9.]/g, ''));
+              const vendorPrice = args.vendor_initial_price ? parseFloat(args.vendor_initial_price.replace(/[^0-9.]/g, '')) : null;
+
+              const negotiationPrompt = `You are an AI Procurement Negotiator. Your job is to negotiate the best deal for the buyer.
+
+VENDOR: ${vendor.name} (${vendor.category})
+ITEM: ${args.item_description}
+TARGET PRICE: ${args.target_price}
+VENDOR'S INITIAL OFFER: ${args.vendor_initial_price || 'Not provided yet'}
+ADDITIONAL TERMS TO NEGOTIATE: ${(args.terms || []).join(', ') || 'None specified'}
+
+Step 1: Research current market prices for this item using web search.
+Step 2: Analyze the vendor's pricing position relative to market.
+Step 3: Develop a negotiation strategy with 2-3 counter-offer options.
+Step 4: For each counter-offer, provide:
+  - Proposed price
+  - Justification (why this is fair)
+  - What to ask for in return (payment terms, warranty, volume discount)
+Step 5: Recommend the best negotiation approach.
+
+Respond in JSON format:
+{
+  "market_research": {"avg_price": "...", "price_range": "...", "sources": ["..."]},
+  "vendor_position": "competitive" | "above_market" | "below_market",
+  "counter_offers": [
+    {"price": "...", "justification": "...", "trade_offs": ["..."]}
+  ],
+  "recommended_strategy": "...",
+  "negotiation_script": "A ready-to-send message to the vendor proposing the best counter-offer"
+}`;
+
+              const negotiationResponse = await openai!.chat.completions.create({
+                model: "qwen3.5-plus",
+                messages: [{ role: "user", content: negotiationPrompt }],
+                temperature: 0.3,
+                extra_body: { enable_search: true, search_options: { search_strategy: "agent" } }
+              } as any);
+
+              const negContent = negotiationResponse.choices[0]?.message?.content || '{}';
+              const negData = JSON.parse(negContent.replace(/```json/g, '').replace(/```/g, '').trim());
+
+              result = JSON.stringify({
+                vendor: vendor.name,
+                item: args.item_description,
+                target_price: args.target_price,
+                vendor_initial_price: args.vendor_initial_price,
+                negotiation: negData,
+                status: 'negotiation_strategy_ready'
+              });
+            } catch (e) {
+              console.error("Negotiation error:", e);
+              result = JSON.stringify({
+                error: "Negotiation analysis failed",
+                fallback: "Manual negotiation recommended. Research market prices and propose a counter-offer."
+              });
+            }
+          } else if (tc.name === 'research_market_price') {
+            // Research market pricing via web search
+            try {
+              const researchPrompt = `Research current market pricing for: ${args.product}
+${args.quantity ? `Quantity needed: ${args.quantity} units` : ''}
+${args.category ? `Category: ${args.category}` : ''}
+
+Provide:
+1. Average market price
+2. Price range (low to high)
+3. Top 3 suppliers with their prices
+4. Volume discount availability
+5. Best value recommendation
+
+Respond in JSON:
+{
+  "product": "...",
+  "average_price": "...",
+  "price_range": {"low": "...", "high": "..."},
+  "suppliers": [{"name": "...", "price": "...", "notes": "..."}],
+  "volume_discounts": "...",
+  "recommendation": "..."
+}`;
+
+              const researchResponse = await openai!.chat.completions.create({
+                model: "qwen3.6-flash",
+                messages: [{ role: "user", content: researchPrompt }],
+                temperature: 0.2,
+                extra_body: { enable_search: true, search_options: { search_strategy: "agent" } }
+              } as any);
+
+              const resContent = researchResponse.choices[0]?.message?.content || '{}';
+              const resData = JSON.parse(resContent.replace(/```json/g, '').replace(/```/g, '').trim());
+
+              result = JSON.stringify({ market_research: resData });
+            } catch (e) {
+              console.error("Market research error:", e);
+              result = JSON.stringify({ error: "Market research failed", fallback: "Use web search to find pricing." });
+            }
+          } else if (tc.name === 'execute_workflow') {
+            // Execute a workflow step based on the ReactFlow graph
+            const workflowNodes = context?.workflowNodes || [];
+            const workflowEdges = context?.workflowEdges || [];
+            const requisition = (context?.purchaseRequisitions || []).find((r: any) => r.id === args.requisition_id) ||
+                               (context?.intakes || []).find((i: any) => i.id === args.requisition_id) || {};
+
+            // Find the trigger node or current node
+            const startNodeId = args.current_node_id || workflowNodes.find((n: any) => n.type === 'trigger')?.id;
+            const currentNode = workflowNodes.find((n: any) => n.id === startNodeId);
+
+            if (!currentNode) {
+              result = JSON.stringify({
+                error: "No workflow found or no trigger node",
+                message: "Please design a workflow in the Workflow Designer first."
+              });
+            } else {
+              // Walk through the workflow graph
+              const executionPath = [];
+              let nodeId = startNodeId;
+              let stepsRemaining = 10; // Safety limit
+
+              while (nodeId && stepsRemaining > 0) {
+                const node = workflowNodes.find((n: any) => n.id === nodeId);
+                if (!node) break;
+
+                const step: any = {
+                  node_id: node.id,
+                  type: node.type,
+                  label: node.data?.label,
+                  description: node.data?.description,
+                  status: 'completed'
+                };
+
+                // Evaluate conditions
+                if (node.type === 'condition') {
+                  const threshold = parseFloat(node.data?.threshold || '10000');
+                  const amount = parseFloat((requisition.amount || '0').replace(/[^0-9.]/g, ''));
+                  const conditionResult = amount > threshold;
+                  step.result = conditionResult;
+                  step.evaluation = `$${amount} ${conditionResult ? '>' : '<='} $${threshold}`;
+
+                  // Follow the appropriate edge
+                  const nextEdge = workflowEdges.find((e: any) =>
+                    e.source === nodeId && e.sourceHandle === (conditionResult ? 'true' : 'false')
+                  );
+                  nodeId = nextEdge?.target;
+                } else {
+                  // Follow the default edge
+                  const nextEdge = workflowEdges.find((e: any) => e.source === nodeId);
+                  nodeId = nextEdge?.target;
+                }
+
+                executionPath.push(step);
+                stepsRemaining--;
+              }
+
+              result = JSON.stringify({
+                requisition_id: args.requisition_id,
+                workflow_id: args.workflow_id || 'default',
+                execution_path: executionPath,
+                total_steps: executionPath.length,
+                status: 'executed',
+                message: `Workflow executed through ${executionPath.length} steps.`
+              });
+            }
+          } else if (tc.name === 'evaluate_workflow_condition') {
+            // Evaluate a workflow condition
+            const { condition_type, condition_params, requisition_data } = args;
+            let result_value = false;
+            let explanation = '';
+
+            if (condition_type === 'amount_threshold') {
+              const threshold = parseFloat(condition_params.threshold || '10000');
+              const amount = parseFloat((requisition_data.amount || '0').replace(/[^0-9.]/g, ''));
+              const operator = condition_params.operator || '>';
+              if (operator === '>') result_value = amount > threshold;
+              else if (operator === '<') result_value = amount < threshold;
+              else if (operator === '>=') result_value = amount >= threshold;
+              else if (operator === '<=') result_value = amount <= threshold;
+              else if (operator === '==') result_value = amount === threshold;
+              explanation = `$${amount} ${operator} $${threshold} → ${result_value}`;
+            } else if (condition_type === 'department_match') {
+              const targetDept = (condition_params.department || '').toLowerCase();
+              const actualDept = (requisition_data.department || '').toLowerCase();
+              result_value = actualDept.includes(targetDept);
+              explanation = `Department "${actualDept}" matches "${targetDept}" → ${result_value}`;
+            } else if (condition_type === 'risk_level') {
+              const maxRisk = condition_params.max_level || 'Medium';
+              const riskLevels = { 'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4 };
+              const actualRisk = riskLevels[requisition_data.risk_level || 'Low'] || 1;
+              const maxRiskVal = riskLevels[maxRisk] || 2;
+              result_value = actualRisk <= maxRiskVal;
+              explanation = `Risk level ${requisition_data.risk_level} (≤${maxRisk}) → ${result_value}`;
+            } else if (condition_type === 'category_match') {
+              const targetCat = (condition_params.category || '').toLowerCase();
+              const actualCat = (requisition_data.category || '').toLowerCase();
+              result_value = actualCat.includes(targetCat);
+              explanation = `Category "${actualCat}" matches "${targetCat}" → ${result_value}`;
+            } else {
+              result_value = true;
+              explanation = 'Custom condition - defaulting to true';
+            }
+
+            result = JSON.stringify({
+              condition_type,
+              result: result_value,
+              explanation,
+              requisition_id: requisition_data.id
+            });
+          } else if (tc.name === 'create_intake_request') {
+            const newId = `REQ-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+            result = JSON.stringify({
+              success: true,
+              intake: {
+                id: newId,
+                title: args.title,
+                department: args.department,
+                amount: args.amount,
+                description: args.description,
+                status: 'Draft',
+                date: new Date().toISOString().split('T')[0],
+              },
+              message: `Purchase requisition ${newId} created successfully.`
+            });
+          } else if (tc.name === 'create_supplier') {
+            const newId = `SUP-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+            result = JSON.stringify({
+              success: true,
+              supplier: {
+                id: newId,
+                name: args.name,
+                category: args.category,
+                contact_email: args.contact_email,
+                risk: args.risk_level || 'Pending',
+                status: 'Onboarding',
+              },
+              message: `Supplier ${args.name} created successfully with ID ${newId}.`
+            });
           } else {
             result = "Success";
           }
