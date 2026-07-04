@@ -83,6 +83,9 @@ service cloud.firestore {
 
     match /userChats/{userId} {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
+      match /conversations/{conversationId} {
+        allow read, write, delete: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
     match /agentMemory/{memoryId} {

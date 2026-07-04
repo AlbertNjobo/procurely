@@ -3,13 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Bot, User, Send, FileText, CheckCircle, Paperclip, Table as TableIcon, Activity, Upload, ChevronDown, ChevronUp, AlertCircle, Loader2, Mic, Square, ListChecks } from 'lucide-react';
+import { Bot, User, Send, FileText, CheckCircle, Paperclip, Table as TableIcon, Activity, Upload, ChevronDown, ChevronUp, AlertCircle, Loader2, Mic, Square, ListChecks, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { useAuth } from '../lib/auth-context';
 import { useData } from '../lib/data-context';
 import ReactMarkdown from 'react-markdown';
 import init, { LiteParse } from '@llamaindex/liteparse-wasm';
 import { toast } from 'sonner';
-import { collection, query, where, getDocs, orderBy, limit, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, doc, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { BidMatrixCard } from '../components/agent/BidMatrixCard';
 import { SupplierFormCard } from '../components/agent/SupplierFormCard';
@@ -571,54 +571,130 @@ function ExpandableBotMessage({ msg, renderCard, isStreaming, onSelect }: { msg:
   );
 }
 
+interface ChatSummary {
+  id: string;
+  title: string;
+  updatedAt: string;
+}
+
+const WELCOME_MSG: Message = {
+  role: 'model',
+  content: `Hello! I am Atlas, your AI Procurement Agent. I can help you orchestrate intake, source suppliers autonomously, and negotiate contracts.`,
+  type: 'text'
+};
+
 export function AgentChat() {
   const { user } = useAuth();
   const { intakes, procurementCatalog, knowledgeBase, suppliers, updateIntake, agentMemory, purchaseRequisitions } = useData();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MSG]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chats, setChats] = useState<ChatSummary[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
 
+  const chatsRef = collection(db, 'userChats', user?.uid || '__none__', 'conversations');
+
+  // Load conversation list
   useEffect(() => {
     if (!user) return;
-    const loadHistory = async () => {
+    const loadChats = async () => {
       try {
-        const chatDoc = await getDoc(doc(db, 'userChats', user.uid));
-        if (chatDoc.exists() && chatDoc.data().messages) {
-          setMessages(chatDoc.data().messages);
-        } else {
-          setMessages([
-            {
-              role: 'model',
-              content: `Hello ${user?.displayName || 'there'}! I am Atlas, your AI Procurement Agent. I can help you orchestrate intake, source suppliers autonomously, and negotiate contracts.\n\nTry some of our interactive flows below!`,
-              type: 'text'
-            }
-          ]);
+        const q = query(chatsRef, orderBy('updatedAt', 'desc'));
+        const snap = await getDocs(q);
+        const list = snap.docs.map(d => ({
+          id: d.id,
+          title: d.data().title || 'New Chat',
+          updatedAt: d.data().updatedAt || ''
+        }));
+        setChats(list);
+        // Auto-select most recent chat
+        if (list.length > 0 && !activeChatId) {
+          setActiveChatId(list[0].id);
         }
       } catch (err) {
-        console.error("Failed to load chat history", err);
+        console.error("Failed to load conversations:", err);
       } finally {
         setIsHistoryLoaded(true);
       }
     };
-    loadHistory();
+    loadChats();
   }, [user]);
 
+  // Load active conversation messages
   useEffect(() => {
-    if (!user || !isHistoryLoaded || messages.length === 0) return;
-    
-    const saveHistory = async () => {
+    if (!user || !activeChatId) return;
+    const loadMessages = async () => {
       try {
-        await setDoc(doc(db, 'userChats', user.uid), {
-           messages: messages,
-           updatedAt: new Date().toISOString()
-        }, { merge: true });
+        const chatDoc = await getDoc(doc(db, 'userChats', user.uid, 'conversations', activeChatId));
+        if (chatDoc.exists() && chatDoc.data().messages) {
+          setMessages(chatDoc.data().messages);
+        } else {
+          setMessages([WELCOME_MSG]);
+        }
       } catch (err) {
-        console.error("Failed to save chat history", err);
+        console.error("Failed to load conversation:", err);
+        setMessages([WELCOME_MSG]);
       }
     };
+    loadMessages();
+  }, [user, activeChatId]);
 
-    const timeout = setTimeout(saveHistory, 1000);
+  // Auto-save messages to active conversation
+  useEffect(() => {
+    if (!user || !activeChatId || !isHistoryLoaded || messages.length === 0) return;
+    const save = async () => {
+      try {
+        await setDoc(doc(db, 'userChats', user.uid, 'conversations', activeChatId), {
+          messages,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        console.error("Failed to save conversation:", err);
+      }
+    };
+    const timeout = setTimeout(save, 1000);
     return () => clearTimeout(timeout);
-  }, [messages, user, isHistoryLoaded]);
+  }, [messages, user, activeChatId, isHistoryLoaded]);
+
+  const createNewChat = async () => {
+    if (!user) return;
+    try {
+      const docRef = await addDoc(chatsRef, {
+        title: 'New Chat',
+        messages: [WELCOME_MSG],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      setChats(prev => [{ id: docRef.id, title: 'New Chat', updatedAt: new Date().toISOString() }, ...prev]);
+      setActiveChatId(docRef.id);
+      setMessages([WELCOME_MSG]);
+    } catch (err) {
+      console.error("Failed to create conversation:", err);
+    }
+  };
+
+  const deleteChat = async (chatId: string) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, 'userChats', user.uid, 'conversations', chatId));
+      setChats(prev => prev.filter(c => c.id !== chatId));
+      if (activeChatId === chatId) {
+        const remaining = chats.filter(c => c.id !== chatId);
+        if (remaining.length > 0) {
+          setActiveChatId(remaining[0].id);
+        } else {
+          createNewChat();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to delete conversation:", err);
+    }
+  };
+
+  const switchChat = (chatId: string) => {
+    setActiveChatId(chatId);
+    setMessages([WELCOME_MSG]);
+  };
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -780,6 +856,15 @@ export function AgentChat() {
       setInput('');
     }
     setIsLoading(true);
+
+    // Auto-generate title from first user message
+    if (messages.length <= 1 && activeChatId && user) {
+      const title = textToSend.length > 50 ? textToSend.substring(0, 50) + '...' : textToSend;
+      setDoc(doc(db, 'userChats', user.uid, 'conversations', activeChatId), {
+        title
+      }, { merge: true }).catch(() => {});
+      setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, title } : c));
+    }
 
     // Default API call
     try {
@@ -1104,19 +1189,61 @@ export function AgentChat() {
   };
 
   return (
-    <div className="p-0 md:p-4 flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-2rem)]">
-      <Card className="flex-1 flex flex-col min-h-0 bg-background/50 border shadow-sm">
-        <CardHeader className="border-b py-3 px-4 bg-white dark:bg-card">
-          <CardTitle className="flex items-center gap-2 text-base font-medium">
-            <div className="w-6 h-6 rounded-md bg-purple-100 text-purple-600 flex items-center justify-center">
-              <Bot className="h-4 w-4" />
+    <div className="p-0 md:p-4 flex h-[calc(100vh-4rem)] md:h-[calc(100vh-2rem)] gap-0">
+      {/* Sidebar */}
+      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-200 overflow-hidden border-r bg-background/50 flex flex-col shrink-0 hidden md:flex`}>
+        <div className="p-3 border-b flex items-center justify-between">
+          <span className="text-sm font-medium text-muted-foreground">Conversations</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={createNewChat}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {chats.map(chat => (
+            <div
+              key={chat.id}
+              onClick={() => switchChat(chat.id)}
+              className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-sm transition-colors ${
+                activeChatId === chat.id
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+              }`}
+            >
+              <MessageSquare className="h-4 w-4 shrink-0" />
+              <span className="truncate flex-1">{chat.title}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); deleteChat(chat.id); }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:text-destructive"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
             </div>
-            Ask Agent
-            {useContext && (
-              <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800 ml-1">
-                KB Active
-              </Badge>
-            )}
+          ))}
+        </div>
+      </div>
+
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <Card className="flex-1 flex flex-col min-h-0 bg-background/50 border-0 md:border shadow-none md:shadow-sm rounded-none md:rounded-lg">
+          <CardHeader className="border-b py-3 px-4 bg-white dark:bg-card">
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 mr-1"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+              </Button>
+              <div className="w-6 h-6 rounded-md bg-purple-100 text-purple-600 flex items-center justify-center">
+                <Bot className="h-4 w-4" />
+              </div>
+              Atlas
+              {useContext && (
+                <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800 ml-1">
+                  KB Active
+                </Badge>
+              )}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 overflow-hidden p-0 relative bg-muted/20">
@@ -1237,6 +1364,7 @@ export function AgentChat() {
           </form>
         </CardFooter>
       </Card>
+      </div>
     </div>
   );
 }
