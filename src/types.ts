@@ -40,6 +40,9 @@ export interface RFQ extends ProcurementRequest {
   description: string;
   dueDate: string;
   requisitionId?: string;
+  budgetRange?: string;
+  invitedSuppliers?: string[];
+  category?: string;
 }
 
 export interface Bid {
@@ -51,6 +54,8 @@ export interface Bid {
   proposal: string;
   status: string;
   createdAt: string;
+  deliveryDays?: number;
+  warranty?: string;
 }
 
 export interface RFQQuestion {

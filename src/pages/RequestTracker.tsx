@@ -15,6 +15,12 @@ import { logAuditEvent } from '../lib/audit';
 import { useMatchValidator } from '../hooks/useMatchValidator';
 import { PipelineStepper } from '../components/PipelineStepper';
 
+function safeDate(val: unknown): string {
+  if (!val) return 'N/A';
+  const d = val instanceof Date ? val : new Date(val as string | number);
+  return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+}
+
 export function RequestTracker() {
   const { id } = useParams<{ id: string }>();
   const { purchaseRequisitions, rfqs, bids, purchaseOrders, goodsReceipts, invoices } = useData();
@@ -61,8 +67,8 @@ export function RequestTracker() {
   const handleApprove = async () => {
     try {
       if (!req || !user) return;
-      await updateDoc(doc(db, 'purchaseRequisitions', req.id), { status: 'Approved' });
-      await logAuditEvent('Approved Requisition', req.id, 'purchaseRequisitions', req, { ...req, status: 'Approved' }, user.uid);
+      await updateDoc(doc(db, 'purchaseRequisitions', req.id), { status: 'Pending RFQ' });
+      await logAuditEvent('Approved Requisition', req.id, 'purchaseRequisitions', req, { ...req, status: 'Pending RFQ' }, user.uid);
       toast.success("Requisition approved");
     } catch (e) {
       toast.error("Failed to approve requisition");
@@ -188,9 +194,9 @@ export function RequestTracker() {
   };
 
   const steps = [
-    { id: 'req', title: 'Requisition Created', icon: <FileText className="h-4 w-4" />, date: new Date(req.createdAt).toLocaleDateString(), active: true, done: true },
+    { id: 'req', title: 'Requisition Created', icon: <FileText className="h-4 w-4" />, date: safeDate(req.createdAt), active: true, done: true },
     { id: 'approve', title: 'Approval', icon: <CheckCircle2 className="h-4 w-4" />, date: req.status === 'Approved' || req.status === 'Ordered' ? 'Completed' : 'Pending', active: req.status === 'Approved' || req.status === 'Ordered' || req.status === 'Pending', done: req.status === 'Approved' || req.status === 'Ordered' },
-    { id: 'rfq', title: 'RFQ Sourcing', icon: <Send className="h-4 w-4" />, date: rfq ? new Date(rfq.createdAt).toLocaleDateString() : 'Pending', active: !!rfq, done: !!rfq && rfq.status !== 'Draft' },
+    { id: 'rfq', title: 'RFQ Sourcing', icon: <Send className="h-4 w-4" />, date: rfq ? safeDate(rfq.createdAt) : 'Pending', active: !!rfq, done: !!rfq && rfq.status !== 'Draft' },
     { id: 'po', title: 'Purchase Order', icon: <DollarSign className="h-4 w-4" />, date: req.status === 'Ordered' ? 'Issued' : 'Pending', active: req.status === 'Ordered', done: req.status === 'Ordered' },
     { id: 'delivery', title: 'Delivery & Payment', icon: <Truck className="h-4 w-4" />, date: 'Pending', active: false, done: false },
   ];
@@ -244,7 +250,7 @@ export function RequestTracker() {
               <div>{req.createdBy}</div>
               
               <div className="text-muted-foreground">Date</div>
-              <div>{new Date(req.createdAt).toLocaleDateString()}</div>
+              <div>{safeDate(req.createdAt)}</div>
             </div>
             
             {req.status === 'Pending Manager Approval' && profile?.role !== 'Requestor' && (
@@ -318,7 +324,7 @@ export function RequestTracker() {
                           <div key={bid.id} className="flex justify-between items-center p-2 rounded-md border text-sm">
                             <div>
                               <div className="font-medium">{bid.vendorName}</div>
-                              <div className="text-muted-foreground text-xs">{new Date(bid.createdAt).toLocaleDateString()}</div>
+                              <div className="text-muted-foreground text-xs">{safeDate(bid.createdAt)}</div>
                             </div>
                             <div className="text-right">
                               <div className="font-medium">\${bid.amount.toLocaleString()}</div>

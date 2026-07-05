@@ -10,6 +10,17 @@ const app = express();
 const PORT = 3000;
 app.use(express.json());
 
+// ============================================================================
+// Alibaba Cloud / Qwen Cloud Integration
+// All AI capabilities are powered by Qwen Cloud (Alibaba Cloud) via DashScope API:
+// - Chat: qwen3.5-plus (main agent + specialist sub-agents)
+// - Embeddings: text-embedding-v4 (1024 dimensions, document + query vectorization)
+// - Reranking: qwen3-rerank (cross-attention reranking for RAG precision)
+// - Vision: qwen3.5-plus (invoice OCR, document processing)
+// - Web Search: enable_search (real-time supplier/market research)
+// API endpoint: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+// ============================================================================
+
 // Initialize Qwen via DashScope compatible mode
 let openai: OpenAI | null = null;
 try {
@@ -653,12 +664,34 @@ IMPORTANT: NEVER combine Qualifying, Recommending, and Intake Form phases. You M
           } else if (tc.name === 'search_procurement_catalog') {
             const catalog = context?.procurementCatalog || [];
             const query = (args.query || '').toLowerCase();
-            const filtered = catalog.filter((item: any) => 
-              (item.name || '').toLowerCase().includes(query) || 
-              (item.category || '').toLowerCase().includes(query) ||
-              (item.description || '').toLowerCase().includes(query)
-            );
-            result = JSON.stringify(filtered.length > 0 ? filtered : [{ message: "No catalog items found matching query." }]);
+            const category = (args.category || '').toLowerCase();
+            let filtered = catalog;
+
+            // Keyword search
+            if (query) {
+              filtered = filtered.filter((item: any) =>
+                (item.name || '').toLowerCase().includes(query) ||
+                (item.category || '').toLowerCase().includes(query) ||
+                (item.description || '').toLowerCase().includes(query)
+              );
+            }
+
+            // Category filter
+            if (category) {
+              filtered = filtered.filter((item: any) =>
+                (item.category || '').toLowerCase().includes(category)
+              );
+            }
+
+            // Price filters
+            if (args.max_price != null) {
+              filtered = filtered.filter((item: any) => (item.price || 0) <= args.max_price);
+            }
+            if (args.min_price != null) {
+              filtered = filtered.filter((item: any) => (item.price || 0) >= args.min_price);
+            }
+
+            result = JSON.stringify(filtered.length > 0 ? filtered : [{ message: "No catalog items found matching criteria." }]);
           } else if (tc.name === 'get_suppliers') {
             // Query Firestore for real suppliers with optional filters
             const allSuppliers = context?.suppliers || [];
@@ -754,50 +787,51 @@ Respond in valid JSON with keys: comparison (array), winning_supplier, reasoning
               result = JSON.stringify({ status: 'Matrix Generated (Basic)', winning_supplier: args.supplier_ids?.[0], reasoning: 'Basic analysis - detailed review recommended.' });
             }
           } else if (tc.name === 'update_intake_status') {
-            result = JSON.stringify({ success: true, new_status: args.new_status });
+            // Return data for client-side Firestore update
+            result = JSON.stringify({
+              success: true,
+              intake_id: args.intake_id,
+              new_status: args.new_status,
+              message: `Status updated to "${args.new_status}" for intake ${args.intake_id}.`
+            });
           } else if (tc.name === 'suggest_procurement_items') {
             try {
-              const populatedItems = await Promise.all((args.items || []).map(async (item: any) => {
-                let imageUrl = `https://placehold.co/400x300/f3f4f6/6b7280?text=${encodeURIComponent(item.name)}`;
-                try {
-                  const qwenResponse = await fetch("https://dashscope-intl.aliyuncs.com/compatible-mode/v1/responses", {
-                    method: "POST",
-                    headers: {
-                      "Authorization": `Bearer ${process.env.QWEN_API_KEY}`,
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      model: "qwen3.5-plus",
-                      input: `Find product images for: ${item.image_query}`,
-                      tools: [{ type: "web_search_image" }]
-                    })
-                  });
-                  
-                  if (qwenResponse.ok) {
-                    const data = await qwenResponse.json();
-                    if (data.output && Array.isArray(data.output)) {
-                      for (const out of data.output) {
-                        if (out.type === "web_search_image_call" && out.output) {
-                          const parsedImages = JSON.parse(out.output);
-                          if (parsedImages && parsedImages.length > 0) {
-                            imageUrl = parsedImages[0].url;
-                            break;
-                          }
-                        }
-                      }
-                    }
-                  }
-                } catch (e) {
-                  console.error("Failed to fetch image for item", item.name, e);
-                }
-                
-                return { ...item, image_url: imageUrl };
-              }));
-              
-              result = JSON.stringify({ items: populatedItems });
+              // Step 1: Use Qwen with web search to research real products
+              const searchResponse = await openai!.chat.completions.create({
+                model: "qwen3.5-plus",
+                messages: [{
+                  role: "user",
+                  content: `Research current products for: ${JSON.stringify(args.items?.map((i: any) => i.name) || [])}. For each product, find: real product name, current market price (USD), key specs, and a product image URL. Return a JSON array with objects: { "name", "description", "estimated_price", "image_url", "badges": [{"text": "...", "variant": "secondary"}] }. Return ONLY valid JSON.`
+                }],
+                temperature: 0.2,
+                extra_body: { enable_search: true, search_options: { search_strategy: "agent" } }
+              } as any);
+
+              const content = searchResponse.choices[0]?.message?.content || '[]';
+              const webItems = JSON.parse(content.replace(/```json/g, '').replace(/```/g, '').trim());
+
+              // Step 2: Merge web results with agent-provided items, preferring web data
+              const agentItems = args.items || [];
+              const mergedItems = agentItems.map((agentItem: any, i: number) => {
+                const webItem = webItems[i] || {};
+                return {
+                  name: webItem.name || agentItem.name,
+                  description: webItem.description || agentItem.description,
+                  estimated_price: webItem.estimated_price || agentItem.estimated_price,
+                  image_url: webItem.image_url || `https://placehold.co/400x300/f3f4f6/6b7280?text=${encodeURIComponent(agentItem.name)}`,
+                  badges: webItem.badges || agentItem.badges || []
+                };
+              });
+
+              result = JSON.stringify({ items: mergedItems });
             } catch (err) {
               console.error("Suggest items error:", err);
-              result = JSON.stringify({ items: args.items });
+              // Fallback to agent-provided items with placeholder images
+              const fallbackItems = (args.items || []).map((item: any) => ({
+                ...item,
+                image_url: item.image_url || `https://placehold.co/400x300/f3f4f6/6b7280?text=${encodeURIComponent(item.name)}`
+              }));
+              result = JSON.stringify({ items: fallbackItems });
             }
           } else if (tc.name === 'search_product_images') {
             try {
@@ -901,14 +935,20 @@ Respond in valid JSON with keys: comparison (array), winning_supplier, reasoning
               }))
             });
           } else if (tc.name === 'store_memory') {
-            // Store a new memory entry
+            // Generate embedding for the memory content
+            let embedding: number[] = [];
+            try {
+              embedding = await generateQueryEmbedding(args.content);
+            } catch (e) {
+              console.warn("Failed to embed memory content:", e);
+            }
             const newMemory = {
               userId: context?.userId || 'anonymous',
               type: args.memory_type,
               content: args.content,
               metadata: args.metadata || {},
               createdAt: new Date().toISOString(),
-              embedding: [] // Will be populated by client-side save to Firestore
+              embedding
             };
             result = JSON.stringify({
               success: true,
@@ -916,10 +956,8 @@ Respond in valid JSON with keys: comparison (array), winning_supplier, reasoning
               message: `Memory stored: ${args.content.substring(0, 50)}...`
             });
           } else if (tc.name === 'create_rfq') {
-            // Create an RFQ in Firestore
             const rfqId = `RFQ-${Date.now()}`;
             const rfq = {
-              id: rfqId,
               title: args.title,
               description: args.description,
               supplierIds: args.supplier_ids,
@@ -932,8 +970,8 @@ Respond in valid JSON with keys: comparison (array), winning_supplier, reasoning
             };
             result = JSON.stringify({
               success: true,
-              rfq,
-              message: `RFQ "${args.title}" created with ID ${rfqId}. Ready to publish to ${args.supplier_ids.length} suppliers.`
+              rfq: { id: rfqId, ...rfq },
+              message: `RFQ "${args.title}" created. Ready to publish to ${args.supplier_ids.length} suppliers.`
             });
           } else if (tc.name === 'select_bid') {
             // Select a winning bid and create PO
@@ -1263,7 +1301,7 @@ Respond in JSON:
               requisition_id: requisition_data.id
             });
           } else if (tc.name === 'create_intake_request') {
-            const newId = `REQ-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+            const newId = `REQ-${Date.now()}`;
             result = JSON.stringify({
               success: true,
               intake: {
@@ -1275,10 +1313,10 @@ Respond in JSON:
                 status: 'Draft',
                 date: new Date().toISOString().split('T')[0],
               },
-              message: `Purchase requisition ${newId} created successfully.`
+              message: `Requisition ${newId} created successfully.`
             });
           } else if (tc.name === 'create_supplier') {
-            const newId = `SUP-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+            const newId = `SUP-${Date.now()}`;
             result = JSON.stringify({
               success: true,
               supplier: {
@@ -1289,7 +1327,7 @@ Respond in JSON:
                 risk: args.risk_level || 'Pending',
                 status: 'Onboarding',
               },
-              message: `Supplier ${args.name} created successfully with ID ${newId}.`
+              message: `Supplier "${args.name}" created successfully with ID ${newId}.`
             });
           } else {
             result = "Success";

@@ -50,68 +50,60 @@ export function Dashboard() {
       <ProcureToPayJourney />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-border/60">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Spend (YTD)</CardTitle>
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <DollarSign className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Spend (YTD)</CardTitle>
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-violet-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$1.2M</div>
-            <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-              <span>+12.5%</span> <span className="text-muted-foreground">vs last year</span>
-            </p>
+            <div className="text-2xl font-bold tracking-tight">$1.2M</div>
+            <p className="text-xs text-emerald-600 mt-1">+12.5% vs last year</p>
           </CardContent>
         </Card>
         
-        <Link to="/app/intake?filter=active" className="transition-transform hover:scale-105 active:scale-95 block">
-          <Card className="h-full border-blue-200 dark:border-blue-800 shadow-sm hover:shadow-md transition-shadow">
+        <Link to="/app/intake?filter=active" className="group">
+          <Card className="h-full border-border/60 hover:border-primary/30 hover:shadow-md transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Active Requests</CardTitle>
-              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Active Requests</CardTitle>
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/15 transition-colors">
                 <FileText className="h-4 w-4 text-blue-500" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{activeRequestsCount}</div>
-              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                <span>View all active</span>
-              </p>
+              <div className="text-2xl font-bold tracking-tight">{activeRequestsCount}</div>
+              <p className="text-xs text-blue-600 mt-1 group-hover:underline">View all active →</p>
             </CardContent>
           </Card>
         </Link>
 
-        <Link to="/app/intake?filter=pending" className="transition-transform hover:scale-105 active:scale-95 block">
-          <Card className="h-full border-yellow-200 dark:border-yellow-800 shadow-sm hover:shadow-md transition-shadow">
+        <Link to="/app/intake?filter=pending" className="group">
+          <Card className="h-full border-border/60 hover:border-amber-300/50 hover:shadow-md transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
-              <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                <CheckCircle className="h-4 w-4 text-yellow-500" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Approvals</CardTitle>
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/15 transition-colors">
+                <CheckCircle className="h-4 w-4 text-amber-500" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{pendingApprovalsCount}</div>
-              <p className="text-xs text-yellow-600 mt-1 flex items-center gap-1">
-                <span>Needs your attention</span>
-              </p>
+              <div className="text-2xl font-bold tracking-tight">{pendingApprovalsCount}</div>
+              <p className="text-xs text-amber-600 mt-1 group-hover:underline">Needs attention →</p>
             </CardContent>
           </Card>
         </Link>
 
-        <Link to="/app/suppliers" className="transition-transform hover:scale-105 active:scale-95 block">
-          <Card className="h-full border-orange-200 dark:border-orange-800 shadow-sm hover:shadow-md transition-shadow">
+        <Link to="/app/suppliers" className="group">
+          <Card className="h-full border-border/60 hover:border-emerald-300/50 hover:shadow-md transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Active Suppliers</CardTitle>
-              <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center">
-                <Users className="h-4 w-4 text-orange-500" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Active Suppliers</CardTitle>
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/15 transition-colors">
+                <Users className="h-4 w-4 text-emerald-500" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{activeSuppliersCount}</div>
-              <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
-                <span>View directory</span>
-              </p>
+              <div className="text-2xl font-bold tracking-tight">{activeSuppliersCount}</div>
+              <p className="text-xs text-emerald-600 mt-1 group-hover:underline">View directory →</p>
             </CardContent>
           </Card>
         </Link>

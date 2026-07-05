@@ -3,6 +3,7 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDocs, writeBatch, qu
 import { db, auth } from './firebase';
 import { useAuth } from './auth-context';
 import { PurchaseRequisition, RFQ, Bid, GoodsReceipt, Invoice } from '../types';
+import { seedDemoData } from './seed-demo';
 
 export type IntakeRequest = { id: string; title: string; department: string; status: string; amount: string; date: string; supplier: string; description: string; userId: string; };
 export type Supplier = { id: string; name: string; category: string; risk: string; status: string; compliance: boolean; userId: string; };
@@ -212,6 +213,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
     };
     seedData();
+    seedDemoData(user.uid).catch(console.error);
 
     const intakesQuery = query(collection(db, 'intakes'), where("userId", "==", user.uid));
     const unsubIntakes = onSnapshot(intakesQuery, (snap) => {

@@ -11,13 +11,25 @@ export const agentTools: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "search_procurement_catalog",
-      description: "Search the procurement catalog for items, hardware, or software that are already approved or available for purchase.",
+      description: "Search the procurement catalog for items available for purchase. Supports keyword search, category browsing, and price filtering. Use this when the user asks about products, wants recommendations, or needs to find items within a budget.",
       parameters: {
         type: "object",
         properties: {
           query: {
             type: "string",
-            description: "The search query (e.g., 'laptop', 'software', 'monitor')",
+            description: "Search keyword to match against item name, category, or description (e.g., 'laptop', 'cloud', 'chair'). Leave empty to browse by category.",
+          },
+          category: {
+            type: "string",
+            description: "Filter by category (e.g., 'Hardware', 'Cloud Infrastructure', 'SaaS / CRM', 'Office Supplies').",
+          },
+          max_price: {
+            type: "number",
+            description: "Maximum price filter. Only return items at or below this price.",
+          },
+          min_price: {
+            type: "number",
+            description: "Minimum price filter. Only return items at or above this price.",
           },
         },
       },

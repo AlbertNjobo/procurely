@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Bot, User, Send, FileText, CheckCircle, Paperclip, Table as TableIcon, Activity, Upload, ChevronDown, ChevronUp, AlertCircle, Loader2, Mic, Square, ListChecks, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Bot, User, Send, FileText, CheckCircle, Paperclip, Table as TableIcon, Activity, Upload, ChevronDown, ChevronUp, AlertCircle, Loader2, Mic, Square, ListChecks, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeft, Search } from 'lucide-react';
 import { useAuth } from '../lib/auth-context';
 import { useData } from '../lib/data-context';
 import ReactMarkdown from 'react-markdown';
@@ -19,7 +19,7 @@ import { UploadPromptCard } from '../components/agent/UploadPromptCard';
 import { SelectedSupplierCard } from '../components/agent/SelectedSupplierCard';
 import { ImpactAnalysisCard } from '../components/agent/ImpactAnalysisCard';
 
-type MessageType = 'text' | 'bid-matrix' | 'supplier-form' | 'process-timeline' | 'item-details' | 'upload-prompt' | 'selected-supplier' | 'impact-analysis' | 'approval' | 'qualification-questions' | 'intake-confirmation';
+type MessageType = 'text' | 'bid-matrix' | 'supplier-form' | 'process-timeline' | 'item-details' | 'upload-prompt' | 'selected-supplier' | 'impact-analysis' | 'approval' | 'qualification-questions' | 'intake-confirmation' | 'supplier-confirmation' | 'rfq-confirmation' | 'bid-confirmation' | 'po-confirmation';
 
 interface ToolCall {
   name: string;
@@ -356,42 +356,108 @@ function GuidedWizard({ questions, onComplete }: { questions: any[], onComplete:
   );
 }
 
+function getToolLabel(name: string, args: any): string {
+  const a = args || {};
+  switch (name) {
+    case 'search_procurement_catalog': return `Searching catalog for "${a.query || 'all items'}"`;
+    case 'suggest_procurement_items': return 'Researching products online...';
+    case 'search_product_images': return `Finding images for "${a.query || 'products'}"`;
+    case 'evaluate_supplier_risk': return `Analyzing risk for ${a.supplier_id || 'supplier'}...`;
+    case 'generate_bid_matrix': return 'Generating bid comparison...';
+    case 'negotiate_with_vendor': return `Negotiating with ${a.vendor_id || 'vendor'}...`;
+    case 'research_market_price': return `Researching prices for ${a.product || 'product'}...`;
+    case 'get_suppliers': return 'Fetching suppliers...';
+    case 'get_intake_requests': return 'Fetching requisitions...';
+    case 'create_intake_request': return 'Creating requisition...';
+    case 'create_supplier': return `Adding supplier ${a.name || ''}...`;
+    case 'create_rfq': return `Creating RFQ: ${a.title || ''}`;
+    case 'create_purchase_order': return 'Creating purchase order...';
+    case 'select_bid': return 'Selecting winning bid...';
+    case 'present_qualification_questions': return 'Preparing questions...';
+    case 'ask_form_questions': return 'Preparing intake form...';
+    case 'request_approval': return 'Requesting approval...';
+    case 'confirm_action': return 'Confirming action...';
+    case 'recall_memory': return 'Checking memory...';
+    case 'store_memory': return 'Saving to memory...';
+    case 'delegate_to_specialist': return `Delegating to ${a.specialist || 'specialist'}...`;
+    case 'update_intake_status': return `Updating status to "${a.new_status || ''}"...`;
+    case 'track_delivery': return `Tracking delivery ${a.po_id || ''}...`;
+    case 'process_payment': return 'Processing payment...';
+    case 'process_invoice': return 'Processing invoice...';
+    default: return `Running ${name}...`;
+  }
+}
+
+function getToolIcon(name: string) {
+  if (name.startsWith('search_') || name === 'research_market_price') return <Search className="h-3.5 w-3.5 text-blue-500" />;
+  if (name.startsWith('create_') || name === 'select_bid') return <CheckCircle className="h-3.5 w-3.5 text-green-500" />;
+  if (name.startsWith('delegate_') || name === 'negotiate_with_vendor') return <Bot className="h-3.5 w-3.5 text-purple-500" />;
+  if (name.includes('memory')) return <Activity className="h-3.5 w-3.5 text-amber-500" />;
+  if (name.includes('approval') || name.includes('confirm')) return <AlertCircle className="h-3.5 w-3.5 text-orange-500" />;
+  return <Activity className="h-3.5 w-3.5 text-muted-foreground" />;
+}
+
 function ToolCallBlock({ tool }: { tool: ToolCall }) {
   const isPending = !tool.result;
+  const label = getToolLabel(tool.name, tool.arguments);
+  const [expanded, setExpanded] = useState(false);
+
+  // Parse result for summary
+  let resultSummary = '';
+  if (tool.result) {
+    try {
+      const data = JSON.parse(tool.result);
+      if (data.message) resultSummary = data.message;
+      else if (data.items) resultSummary = `${data.items.length} items found`;
+      else if (data.success !== undefined) resultSummary = data.success ? 'Success' : 'Failed';
+      else if (data.analysis) resultSummary = 'Analysis complete';
+      else if (data.supplier) resultSummary = `Created: ${data.supplier.name || data.supplier.id}`;
+      else if (data.extracted) resultSummary = `Extracted: ${data.extracted.vendor_name || 'data'}`;
+      else resultSummary = 'Done';
+    } catch { resultSummary = 'Done'; }
+  }
 
   return (
-    <div className="bg-muted/30 border border-purple-200/50 rounded-lg p-3 my-2 font-mono text-xs overflow-hidden">
-      <div className="flex items-center gap-2 mb-2 text-purple-700">
-        <Activity className={`h-3 w-3 ${isPending ? 'animate-spin' : ''}`} />
-        <span className="font-semibold">Tool Call: {tool.name}</span>
-        {isPending && (
-          <span className="ml-auto flex h-2 w-2 relative">
+    <div className="bg-muted/20 border border-border/50 rounded-lg my-2 overflow-hidden text-sm">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-muted/40 transition-colors text-left"
+      >
+        {isPending ? (
+          <span className="relative flex h-3 w-3 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
           </span>
+        ) : (
+          getToolIcon(tool.name)
         )}
-      </div>
-      <div className="grid gap-2">
-        <div className="bg-white/50 dark:bg-black/20 p-2 rounded">
-          <span className="text-muted-foreground block mb-1">Arguments:</span>
-          <pre className="whitespace-pre-wrap break-words">{JSON.stringify(tool.arguments, null, 2)}</pre>
-        </div>
-        <div className="bg-white/50 dark:bg-black/20 p-2 rounded">
-          <span className="text-muted-foreground block mb-1">Result:</span>
-          {isPending ? (
-            <div className="flex items-center gap-2 text-muted-foreground italic min-h-[1.25rem]">
-              <span className="inline-flex gap-1">
-                <span className="w-1 h-1 bg-muted-foreground/50 rounded-full animate-bounce" />
-                <span className="w-1 h-1 bg-muted-foreground/50 rounded-full animate-bounce [animation-delay:-.3s]" />
-                <span className="w-1 h-1 bg-muted-foreground/50 rounded-full animate-bounce [animation-delay:-.5s]" />
-              </span>
-              Awaiting response from Qwen environment...
+        <span className={`flex-1 ${isPending ? 'text-foreground' : 'text-muted-foreground'}`}>{label}</span>
+        {!isPending && resultSummary && (
+          <span className="text-xs text-green-600 dark:text-green-400 shrink-0">{resultSummary}</span>
+        )}
+        {expanded && <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+        {!expanded && <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+      </button>
+      {expanded && (
+        <div className="px-3 pb-3 space-y-2 border-t border-border/30">
+          {Object.keys(tool.arguments || {}).length > 0 && (
+            <div className="mt-2">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Parameters</span>
+              <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-words bg-background/50 rounded p-2 max-h-32 overflow-y-auto">
+                {JSON.stringify(tool.arguments, null, 2)}
+              </pre>
             </div>
-          ) : (
-            <pre className="whitespace-pre-wrap break-words">{tool.result}</pre>
+          )}
+          {tool.result && (
+            <div>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Result</span>
+              <pre className="mt-1 text-xs text-muted-foreground whitespace-pre-wrap break-words bg-background/50 rounded p-2 max-h-48 overflow-y-auto">
+                {tool.result}
+              </pre>
+            </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -977,6 +1043,92 @@ export function AgentChat() {
                     } catch (e) {}
                   }
 
+                  // Intercept create_supplier to show confirmation card
+                  if (parsed.name === 'create_supplier' && targetTool.arguments) {
+                    try {
+                      const args = typeof targetTool.arguments === 'string'
+                        ? JSON.parse(targetTool.arguments)
+                        : targetTool.arguments;
+                      currentModelMessage.type = 'supplier-confirmation';
+                      (currentModelMessage as any).pendingSupplier = {
+                        name: args.name,
+                        category: args.category,
+                        contact_email: args.contact_email,
+                        risk_level: args.risk_level || 'Pending',
+                      };
+                    } catch (e) {}
+                  }
+
+                  // Intercept update_intake_status — auto-write to Firestore
+                  if (parsed.name === 'update_intake_status' && targetTool.result) {
+                    const data = JSON.parse(targetTool.result);
+                    if (data.success && data.intake_id) {
+                      import('firebase/firestore').then(fb =>
+                        fb.updateDoc(fb.doc(db, 'intakes', data.intake_id), { status: data.new_status })
+                      ).catch(() => {});
+                    }
+                  }
+
+                  // Intercept store_memory — auto-write to Firestore
+                  if (parsed.name === 'store_memory' && targetTool.result) {
+                    const data = JSON.parse(targetTool.result);
+                    if (data.success && data.memory) {
+                      import('firebase/firestore').then(fb =>
+                        fb.addDoc(fb.collection(db, 'agentMemory'), data.memory)
+                      ).catch(() => {});
+                    }
+                  }
+
+                  // Intercept create_rfq — show confirmation card
+                  if (parsed.name === 'create_rfq' && targetTool.arguments) {
+                    try {
+                      const args = typeof targetTool.arguments === 'string'
+                        ? JSON.parse(targetTool.arguments)
+                        : targetTool.arguments;
+                      currentModelMessage.type = 'rfq-confirmation';
+                      (currentModelMessage as any).pendingRfq = {
+                        title: args.title,
+                        description: args.description,
+                        supplier_ids: args.supplier_ids,
+                        due_date: args.due_date,
+                        budget_range: args.budget_range,
+                      };
+                    } catch (e) {}
+                  }
+
+                  // Intercept select_bid — show confirmation card
+                  if (parsed.name === 'select_bid' && targetTool.arguments) {
+                    try {
+                      const args = typeof targetTool.arguments === 'string'
+                        ? JSON.parse(targetTool.arguments)
+                        : targetTool.arguments;
+                      currentModelMessage.type = 'bid-confirmation';
+                      (currentModelMessage as any).pendingBid = {
+                        rfq_id: args.rfq_id,
+                        bid_id: args.bid_id,
+                        supplier_id: args.supplier_id,
+                        amount: args.amount,
+                        reasoning: args.reasoning,
+                      };
+                    } catch (e) {}
+                  }
+
+                  // Intercept create_purchase_order — show confirmation card
+                  if (parsed.name === 'create_purchase_order' && targetTool.arguments) {
+                    try {
+                      const args = typeof targetTool.arguments === 'string'
+                        ? JSON.parse(targetTool.arguments)
+                        : targetTool.arguments;
+                      currentModelMessage.type = 'po-confirmation';
+                      (currentModelMessage as any).pendingPo = {
+                        supplier_id: args.supplier_id,
+                        items: args.items,
+                        total_amount: args.total_amount,
+                        requisition_id: args.requisition_id,
+                      };
+                    } catch (e) {}
+                  }
+
                   // Intercept present_qualification_questions to show interactive chips
                   if (parsed.name === 'present_qualification_questions') {
                     try {
@@ -1136,6 +1288,182 @@ export function AgentChat() {
           </div>
         );
       }
+      case 'supplier-confirmation': {
+        const pending = (msg as any).pendingSupplier;
+        if (!pending) return null;
+        return (
+          <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/50 rounded-xl p-4 mt-2">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <h4 className="font-semibold text-green-900 dark:text-green-100">Confirm New Supplier</h4>
+            </div>
+            <p className="text-sm text-green-800 dark:text-green-200 mb-3">Please review the supplier details before adding:</p>
+            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 mb-4 text-sm space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Name:</span>
+                <span className="font-medium">{pending.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Category:</span>
+                <span className="font-medium">{pending.category}</span>
+              </div>
+              {pending.contact_email && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Email:</span>
+                  <span className="font-medium">{pending.contact_email}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Risk Level:</span>
+                <span className="font-medium">{pending.risk_level}</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={async () => {
+                  try {
+                    const { addDoc, collection: fbCollection } = await import('firebase/firestore');
+                    const newSupplier = {
+                      name: pending.name,
+                      category: pending.category,
+                      risk: pending.risk_level,
+                      status: 'Onboarding',
+                      compliance: false,
+                      userId: user?.uid || '',
+                    };
+                    const docRef = await addDoc(fbCollection(db, 'suppliers'), newSupplier);
+                    toast.success(`Supplier "${pending.name}" added successfully`);
+                    handleSend(`Supplier "${pending.name}" has been added to the directory with ID ${docRef.id}. What would you like to do next?`);
+                  } catch (e) {
+                    console.error("Error creating supplier:", e);
+                    toast.error("Failed to add supplier");
+                  }
+                }}
+              >
+                <CheckCircle className="h-4 w-4 mr-1" /> Confirm & Add
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-200 text-red-700 hover:bg-red-50"
+                onClick={() => handleSend("I changed my mind. Cancel adding this supplier.")}
+              >
+                <AlertCircle className="h-4 w-4 mr-1" /> Cancel
+              </Button>
+            </div>
+          </div>
+        );
+      }
+      case 'rfq-confirmation': {
+        const rfq = (msg as any).pendingRfq;
+        if (!rfq) return null;
+        return (
+          <div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-xl p-4 mt-2">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-5 w-5 text-indigo-600" />
+              <h4 className="font-semibold text-indigo-900 dark:text-indigo-100">Confirm RFQ Creation</h4>
+            </div>
+            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 mb-4 text-sm space-y-2">
+              <div className="flex justify-between"><span className="text-muted-foreground">Title:</span><span className="font-medium">{rfq.title}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Suppliers:</span><span className="font-medium">{rfq.supplier_ids?.length || 0}</span></div>
+              {rfq.budget_range && <div className="flex justify-between"><span className="text-muted-foreground">Budget:</span><span className="font-medium">{rfq.budget_range}</span></div>}
+              {rfq.due_date && <div className="flex justify-between"><span className="text-muted-foreground">Due:</span><span className="font-medium">{rfq.due_date}</span></div>}
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                try {
+                  const fb = await import('firebase/firestore');
+                  const docRef = await fb.addDoc(fb.collection(db, 'rfqs'), {
+                    title: rfq.title, description: rfq.description || '',
+                    supplierIds: rfq.supplier_ids || [], dueDate: rfq.due_date || '',
+                    budgetRange: rfq.budget_range || '', status: 'Draft',
+                    createdBy: user?.uid || '', createdAt: new Date().toISOString(),
+                    auditTrail: [{ action: 'created', actorId: user?.uid || '', timestamp: new Date().toISOString() }]
+                  });
+                  toast.success(`RFQ ${docRef.id} created`);
+                  handleSend(`RFQ "${rfq.title}" created with ID ${docRef.id}. What next?`);
+                } catch (e) { toast.error("Failed to create RFQ"); }
+              }}><CheckCircle className="h-4 w-4 mr-1" /> Confirm</Button>
+              <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => handleSend("Cancel this RFQ.")}><AlertCircle className="h-4 w-4 mr-1" /> Cancel</Button>
+            </div>
+          </div>
+        );
+      }
+      case 'bid-confirmation': {
+        const bid = (msg as any).pendingBid;
+        if (!bid) return null;
+        return (
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 mt-2">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="h-5 w-5 text-amber-600" />
+              <h4 className="font-semibold text-amber-900 dark:text-amber-100">Confirm Bid Selection</h4>
+            </div>
+            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 mb-4 text-sm space-y-2">
+              <div className="flex justify-between"><span className="text-muted-foreground">Supplier:</span><span className="font-medium">{bid.supplier_id}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Amount:</span><span className="font-medium">{bid.amount}</span></div>
+              {bid.reasoning && <div className="pt-2 border-t"><span className="text-muted-foreground text-xs">Reasoning:</span><p className="text-xs mt-1">{bid.reasoning}</p></div>}
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                try {
+                  const fb = await import('firebase/firestore');
+                  await fb.addDoc(fb.collection(db, 'bids'), {
+                    rfqId: bid.rfq_id, supplierId: bid.supplier_id,
+                    amount: bid.amount, reasoning: bid.reasoning || '',
+                    status: 'Selected', createdBy: user?.uid || '',
+                    createdAt: new Date().toISOString()
+                  });
+                  toast.success("Bid selected and recorded");
+                  handleSend(`Bid from ${bid.supplier_id} for ${bid.amount} confirmed. What next?`);
+                } catch (e) { toast.error("Failed to record bid"); }
+              }}><CheckCircle className="h-4 w-4 mr-1" /> Confirm</Button>
+              <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => handleSend("Cancel this bid selection.")}><AlertCircle className="h-4 w-4 mr-1" /> Cancel</Button>
+            </div>
+          </div>
+        );
+      }
+      case 'po-confirmation': {
+        const po = (msg as any).pendingPo;
+        if (!po) return null;
+        return (
+          <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-xl p-4 mt-2">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-5 w-5 text-purple-600" />
+              <h4 className="font-semibold text-purple-900 dark:text-purple-100">Confirm Purchase Order</h4>
+            </div>
+            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 mb-4 text-sm space-y-2">
+              <div className="flex justify-between"><span className="text-muted-foreground">Supplier:</span><span className="font-medium">{po.supplier_id}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Total:</span><span className="font-medium">{po.total_amount}</span></div>
+              {po.items?.length > 0 && (
+                <div className="pt-2 border-t">
+                  <span className="text-muted-foreground text-xs">Items:</span>
+                  {po.items.map((item: any, i: number) => (
+                    <div key={i} className="text-xs mt-1">{item.name} x{item.quantity} @ {item.unit_price}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                try {
+                  const fb = await import('firebase/firestore');
+                  const poId = `PO-${Date.now()}`;
+                  await fb.addDoc(fb.collection(db, 'purchaseOrders'), {
+                    id: poId, supplierId: po.supplier_id, items: po.items || [],
+                    totalAmount: po.total_amount, status: 'Pending Approval',
+                    createdBy: user?.uid || '', createdAt: new Date().toISOString()
+                  });
+                  toast.success(`PO ${poId} created`);
+                  handleSend(`Purchase Order ${poId} created for ${po.total_amount}. What next?`);
+                } catch (e) { toast.error("Failed to create PO"); }
+              }}><CheckCircle className="h-4 w-4 mr-1" /> Confirm</Button>
+              <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => handleSend("Cancel this purchase order.")}><AlertCircle className="h-4 w-4 mr-1" /> Cancel</Button>
+            </div>
+          </div>
+        );
+      }
       case 'approval': {
         // Find the request_approval tool call in this message
         const approvalTool = msg.tool_calls?.find(t => t.name === 'request_approval');
@@ -1225,25 +1553,25 @@ export function AgentChat() {
       {/* Main chat area */}
       <div className="flex-1 flex flex-col min-h-0">
         <Card className="flex-1 flex flex-col min-h-0 bg-background/50 border-0 md:border shadow-none md:shadow-sm rounded-none md:rounded-lg">
-          <CardHeader className="border-b py-3 px-4 bg-white dark:bg-card">
-            <CardTitle className="flex items-center gap-2 text-base font-medium">
+          <CardHeader className="border-b py-3 px-4 bg-card">
+            <CardTitle className="flex items-center gap-2.5 text-base font-medium">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 mr-1"
+                className="h-7 w-7 -ml-1"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
               >
                 {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
               </Button>
-              <div className="w-6 h-6 rounded-md bg-purple-100 text-purple-600 flex items-center justify-center">
-                <Bot className="h-4 w-4" />
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                <Bot className="h-4 w-4 text-white" />
               </div>
               Atlas
-              {useContext && (
-                <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800 ml-1">
-                  KB Active
-                </Badge>
-              )}
+            {useContext && (
+              <Badge variant="secondary" className="text-[10px] bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border-violet-200 dark:border-violet-800 ml-1">
+                KB Active
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 overflow-hidden p-0 relative bg-muted/20">
@@ -1260,8 +1588,8 @@ export function AgentChat() {
                     )}
                     <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} w-full`}>
                       {msg.role === 'user' ? (
-                        <div className="p-3.5 rounded-2xl bg-blue-100 dark:bg-blue-900/30 text-foreground rounded-tr-sm">
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <div className="p-3.5 rounded-2xl bg-primary text-primary-foreground rounded-tr-sm shadow-sm">
+                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-0 prose-headings:my-0">
                             <ReactMarkdown>{msg.content}</ReactMarkdown>
                           </div>
                         </div>
@@ -1274,21 +1602,17 @@ export function AgentChat() {
               })}
               {isLoading && messages[messages.length - 1]?.role !== 'model' && (
                 <div className="flex gap-3 max-w-[95%] md:max-w-[85%] self-start w-full">
-                  <div className="flex flex-col items-start w-full">
-                    <div className="bg-white dark:bg-card border shadow-sm rounded-2xl w-full overflow-hidden rounded-tl-sm">
-                      <div className="px-4 py-3 border-b bg-muted/10 flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-md bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                          <Bot className="h-4 w-4" />
-                        </div>
-                        <span className="font-medium text-sm text-foreground">
-                          Thinking...
-                        </span>
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0 mt-1 shadow-sm">
+                    <Bot className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <div className="bg-card border rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" />
+                        <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce [animation-delay:-.3s]" />
+                        <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce [animation-delay:-.5s]" />
                       </div>
-                      <div className="p-5 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-amber-500/50 rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-amber-500/50 rounded-full animate-bounce [animation-delay:-.3s]" />
-                        <div className="w-2 h-2 bg-amber-500/50 rounded-full animate-bounce [animation-delay:-.5s]" />
-                      </div>
+                      <span className="text-xs text-muted-foreground">Thinking...</span>
                     </div>
                   </div>
                 </div>
@@ -1332,11 +1656,11 @@ export function AgentChat() {
                     </div>
                   </div>
                 )}
-                <Input 
-                  placeholder="Describe your business needs..." 
+                <Input
+                  placeholder="Describe your business needs..."
                   value={input}
                   onChange={e => setInput(e.target.value)}
-                  className="flex-1 rounded-full pl-4 pr-24 bg-muted/30 border-muted-foreground/20 focus-visible:ring-purple-500 h-12"
+                  className="flex-1 rounded-full pl-4 pr-24 bg-muted/50 border-border/60 focus-visible:ring-violet-500 h-11"
                   disabled={isLoading}
                 />
                 <div className="absolute right-1.5 flex items-center gap-1 z-20">
@@ -1349,11 +1673,11 @@ export function AgentChat() {
                   >
                     {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={isLoading || !input.trim()}
                     size="icon"
-                    className="h-9 w-9 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
+                    className="h-9 w-9 rounded-full bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
                   >
                     <Send className="h-4 w-4" />
                   </Button>

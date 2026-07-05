@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Atlas Agent Chat Workflow",
+    "subtitle": "From user request to procurement action",
+    "output": "atlas-workflow.html"
+  },
+  "lanes": [
+    { "id": "user", "label": "User" },
+    { "id": "agent", "label": "Atlas Agent" },
+    { "id": "services", "label": "Services" }
+  ],
+  "phases": [
+    { "id": "input", "label": "Input", "fromCol": 0, "toCol": 1 },
+    { "id": "process", "label": "Processing", "fromCol": 1, "toCol": 4 },
+    { "id": "output", "label": "Response", "fromCol": 4, "toCol": 5 }
+  ],
+  "mainPath": ["send", "policy", "tool", "reply"],
+  "nodes": [
+    { "id": "send", "lane": "user", "col": 0, "type": "frontend", "label": "Send Message", "sublabel": "natural language" },
+    { "id": "policy", "lane": "agent", "col": 1, "type": "security", "label": "Policy Check", "sublabel": "KB enforcement", "tag": "gate" },
+    { "id": "tool", "lane": "agent", "col": 3, "type": "backend", "label": "Tool Call", "sublabel": "20+ tools" },
+    { "id": "qwen", "lane": "services", "col": 3, "type": "cloud", "label": "Qwen Cloud", "sublabel": "chat + search" },
+    { "id": "firestore", "lane": "services", "col": 4, "type": "database", "label": "Firestore", "sublabel": "persist" },
+    { "id": "reply", "lane": "agent", "col": 4, "type": "backend", "label": "Agent Reply", "sublabel": "streaming SSE" },
+    { "id": "confirm", "lane": "user", "col": 5, "type": "security", "label": "Confirm", "sublabel": "human approval" }
+  ],
+  "edges": [
+    { "from": "send", "to": "policy", "label": "request", "variant": "emphasis" },
+    { "from": "policy", "to": "tool", "label": "pass" },
+    { "from": "tool", "to": "qwen", "label": "API", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "from": "tool", "to": "firestore", "label": "write", "variant": "dashed" },
+    { "from": "tool", "to": "reply", "label": "result" },
+    { "from": "reply", "to": "confirm", "label": "action", "variant": "emphasis" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "Policy Gate", "items": ["KB policies in system prompt", "Refuses non-compliant requests", "Cites policy by name"] },
+    { "dot": "emerald", "title": "Tools", "items": ["Supplier, RFQ, PO, Bid", "One tool per response", "Confirmation cards"] }
+  ]
+}

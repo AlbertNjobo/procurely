@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, MoreHorizontal, Search, Bot, Sparkles, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuGroup } from '@/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,6 +23,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { motion, AnimatePresence } from 'motion/react';
 
 import { PurchaseRequisition } from '../types';
+
+function safeDate(val: unknown): string {
+  if (!val) return 'N/A';
+  const d = val instanceof Date ? val : new Date(val as string | number);
+  return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+}
 
 const WORKFLOW_STEPS = ['Draft', 'Pending Manager', 'Pending RFQ', 'Pending Finance', 'PO Generated'];
 
@@ -360,13 +366,13 @@ export function Requisitions() {
                       <TableCell className="font-medium">{req.title}</TableCell>
                       <TableCell>{req.category || 'N/A'}</TableCell>
                       <TableCell>${Number(req.totalAmount).toLocaleString()}</TableCell>
-                      <TableCell>{new Date(req.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{safeDate(req.createdAt)}</TableCell>
                       <TableCell>
                         {getStatusBadge(req.status)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Link to={`/tracker/${req.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                          <Link to={`/app/tracker/${req.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                             Track Journey
                           </Link>
                           <Button variant="ghost" size="sm" onClick={() => {
@@ -387,25 +393,25 @@ export function Requisitions() {
       </Card>
 
       <Sheet open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-4xl overflow-y-auto p-0">
           {selectedRequest && (
             <>
-              <SheetHeader className="mb-6">
+              <SheetHeader className="p-6 pb-0 pr-14">
                 <div className="flex items-center justify-between mb-2">
-                  <SheetTitle className="text-2xl font-bold">{selectedRequest.title}</SheetTitle>
+                  <SheetTitle className="text-2xl font-bold pr-4">{selectedRequest.title}</SheetTitle>
                   {getStatusBadge(selectedRequest.status)}
                 </div>
                 <SheetDescription className="text-base text-foreground font-medium">
-                  Submitted {new Date(selectedRequest.createdAt).toLocaleDateString()}
+                  Submitted {safeDate(selectedRequest.createdAt)}
                 </SheetDescription>
               </SheetHeader>
-              
-              <div className="flex flex-col gap-8">
+
+              <div className="flex flex-col gap-8 px-6 py-6">
                 <div>
                   <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wider">Request Workflow</h3>
                   <ApprovalProcess steps={getApprovalSteps(selectedRequest.status)} />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Category</p>
@@ -436,7 +442,7 @@ export function Requisitions() {
                     <p className="font-medium">{selectedRequest.purpose || 'Internal Use'}</p>
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wider">Business Justification</h3>
                   {isEditing ? (
@@ -446,8 +452,8 @@ export function Requisitions() {
                   )}
                 </div>
               </div>
-              
-              <SheetFooter className="mt-8 pt-4 border-t flex sm:justify-between items-center">
+
+              <div className="sticky bottom-0 bg-background border-t px-6 py-4 flex sm:justify-between items-center">
                 <Button variant="outline" onClick={() => {
                   if (isEditing) {
                     setIsEditing(false);
@@ -504,7 +510,7 @@ export function Requisitions() {
                     </>
                   )}
                 </div>
-              </SheetFooter>
+              </div>
             </>
           )}
         </SheetContent>

@@ -1,109 +1,99 @@
-# Atlas - AI Procurement Platform
+# Atlas — AI Procurement Agent
 
-> **Qwen Cloud Hackathon - Track 4: Autopilot Agent**
+> An autonomous AI agent that handles the full procure-to-pay lifecycle using Qwen Cloud, from intake orchestration to vendor negotiation and payment processing.
 
-An AI-powered procurement management platform that automates intake workflows, supplier sourcing, risk evaluation, and contract negotiation using Qwen Cloud's full AI stack.
+**Track:** Autopilot Agent — Qwen Cloud Global AI Hackathon
 
-*Atlas bears the weight of procurement so your team doesn't have to.*
+## What It Does
+
+Atlas is a procurement AI agent that automates real-world business workflows end-to-end. A user describes what they need in natural language, and the agent handles qualification, sourcing, policy enforcement, RFQ creation, bid analysis, and purchase order generation — with human approval at critical decision points.
+
+### Key Features
+
+- **Natural Language Procurement** — "I need 10 laptops for the engineering team under $15K" triggers an autonomous qualification and sourcing flow
+- **KB Policy Enforcement** — Knowledge base policies are injected into the system prompt as mandatory rules; the agent refuses non-compliant requests and cites the specific policy
+- **Multi-Agent Delegation** — Complex tasks are delegated to specialist sub-agents (risk analyst, bid optimizer, compliance checker) that call separate Qwen models
+- **RAG-Powered Knowledge Base** — Documents are chunked, embedded with `text-embedding-v4`, and reranked with `qwen3-rerank` for semantic retrieval
+- **Persistent Memory** — Agent remembers user preferences and past decisions across sessions using embeddings
+- **Human-in-the-Loop** — Confirmation cards for supplier creation, RFQ submission, bid selection, and purchase orders
+- **Vendor Negotiation** — AI-driven market research and counter-offer generation
+- **Voice Input** — Audio transcription for hands-free interaction
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Frontend (React)                         │
-│  AgentChat │ Dashboard │ KnowledgeBase │ Suppliers │ Workflows  │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │ HTTP / NDJSON Streaming
-┌──────────────────────────▼──────────────────────────────────────┐
-│                    Express Backend (server.ts)                   │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
-│  │ Agent Chat  │  │ RAG Pipeline │  │ Document Classification│  │
-│  │ (Streaming) │  │ (Embeddings) │  │ (Structured Output)    │  │
-│  └──────┬──────┘  └──────┬───────┘  └──────────┬─────────────┘  │
-│         │                │                      │                │
-│  ┌──────▼────────────────▼──────────────────────▼─────────────┐  │
-│  │              Qwen Cloud APIs (DashScope)                   │  │
-│  │  qwen3.7-plus │ text-embedding-v4 │ qwen3-rerank │ VL/OCR │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │              Firebase Firestore (Data Layer)               │  │
-│  │  intakes │ suppliers │ knowledgeBase │ kbChunks │ spend    │  │
-│  └────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                    Frontend (React + Vite)                │
+│  Dashboard │ Agent Chat │ Suppliers │ RFQs │ KB │ Workflows │
+└──────────────────────────┬──────────────────────────────┘
+                           │ HTTP/SSE
+┌──────────────────────────▼──────────────────────────────┐
+│                 Express Server (server.ts)                │
+│                                                          │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐  │
+│  │ Agent Chat   │  │ RAG Pipeline │  │ Tool Execution │  │
+│  │ (streaming)  │  │ (search +    │  │ (20+ tools)    │  │
+│  │              │  │  rerank)     │  │                │  │
+│  └──────┬───────┘  └──────┬───────┘  └───────┬────────┘  │
+│         │                 │                   │           │
+└─────────┼─────────────────┼───────────────────┼──────────┘
+          │                 │                   │
+    ┌─────▼─────┐    ┌─────▼─────┐      ┌──────▼──────┐
+    │Qwen Cloud  │    │Qwen Cloud  │      │  Firebase    │
+    │qwen3.5-plus│    │embedding-  │      │  Auth +      │
+    │(chat +     │    │v4 +        │      │  Firestore   │
+    │ tools)     │    │qwen3-rerank│      │              │
+    └───────────┘    └───────────┘      └──────────────┘
 ```
 
 ## Qwen Cloud Integration
 
-### Text Generation
-- **Model**: `qwen3.7-plus` for all agent reasoning, document classification, and analysis
-- **Thinking Mode**: `enable_thinking: true` with `thinking_budget: 2048` for efficient reasoning
-- **Web Search**: `enable_search: true` with `search_strategy: "agent"` for real-time supplier research
-- **Streaming**: NDJSON streaming for real-time token-by-token response delivery
+| Feature | Model | Purpose |
+|---------|-------|---------|
+| Agent chat | qwen3.5-plus | Main conversational agent with tool calling |
+| Specialist agents | qwen3.6-flash | Cost-optimized sub-agent delegation |
+| Embeddings | text-embedding-v4 | Document and query vectorization (1024d) |
+| Reranking | qwen3-rerank | Cross-attention reranking for RAG precision |
+| Web search | enable_search | Real-time supplier/market research |
+| Vision | qwen3.5-plus | Invoice OCR and document processing |
 
-### RAG (Retrieval-Augmented Generation)
-- **Embeddings**: `text-embedding-v4` (1024 dimensions) for semantic document search
-- **Reranking**: `qwen3-rerank` for precision reranking of search results
-- **Pipeline**: Chunk → Embed → Store → Query → Search → Rerank → Inject relevant context
+## Getting Started
 
-### Multimodal
-- **Vision**: `qwen3.5-omni-flash` for audio transcription (voice-to-text)
-- **Image Search**: Responses API with `web_search_image` tool for product visualization
-- **Web Extractor**: Responses API with `web_extractor` for deep supplier research
+```bash
+# Install dependencies
+npm install
 
-### Context Optimization
-- **Session Cache**: `x-dashscope-session-cache: enable` for reduced multi-turn latency
-- **Explicit Cache**: `cache_control: {type: 'ephemeral'}` on system prompt for prefix reuse
-- **Preserved Thinking**: `preserve_thinking: true` for cross-turn reasoning context
+# Set up environment
+cp .env.example .env
+# Add your QWEN_API_KEY
 
-### Structured Output
-- **JSON Schema**: `response_format: { type: "json_schema" }` for reliable document classification
-- **Function Calling**: 13 tools with structured parameter schemas
+# Start development server
+npm run dev
+```
 
-### Human-in-the-Loop
-- **Approval Gates**: `request_approval` tool pauses workflow for critical decisions
-- **Confirmation**: `confirm_action` tool proceeds only after explicit user approval
+The app runs at `http://localhost:3000`. Sign in with Firebase Auth. On first login, demo data is auto-seeded.
 
-## Features
+## Demo Flow
 
-1. **Autonomous Procurement Agent** - Conversational AI (Atlas) that handles intake, sourcing, and negotiation
-2. **Knowledge Base with RAG** - Semantic search across procurement documents using text-embedding-v4 + qwen3-rerank
-3. **Supplier Risk Evaluation** - AI-powered risk assessment with web research
-4. **Bid Matrix Generation** - Comparative analysis of multiple suppliers
-5. **Voice Input** - Audio transcription for hands-free interaction
-6. **Document Classification** - Auto-categorize uploaded procurement documents with structured output
-7. **Workflow Designer** - Visual procurement workflow builder
-8. **Dashboard Analytics** - Real-time spend tracking and metrics
-9. **Human-in-the-Loop** - Approval gates for critical procurement decisions
-
-## Run Locally
-
-**Prerequisites:** Node.js 18+
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Set your Qwen Cloud API key in `.env.local`:
-   ```
-   QWEN_API_KEY=sk-your-dashscope-api-key
-   ```
-
-3. Run the app:
-   ```bash
-   npm run dev
-   ```
-
-4. Open http://localhost:3000
+1. **Dashboard** — View spend analytics, recent approvals, procurement pipeline
+2. **Agent Chat** — "I want to order a laptop for $20,000" → agent refuses, cites KB policy
+3. **Qualification** — "Find me a laptop under $2000" → interactive chips → product cards
+4. **Intake Creation** — Agent creates requisition → confirmation card → persists to Firestore
+5. **Supplier Directory** — View suppliers with risk badges, compliance status
+6. **RFQs & Bids** — RFQ with multiple supplier bids, comparative analysis
+7. **Knowledge Base** — Upload policies, toggle KB context for agent
+8. **Vendor Negotiation** — AI-driven market research and counter-offers
+9. **Workflow Designer** — Visual procurement workflow builder
 
 ## Tech Stack
 
-- **Frontend**: React 19, Vite, Tailwind CSS, shadcn/ui
-- **Backend**: Express, TypeScript
-- **AI**: Qwen Cloud (DashScope API)
-- **Database**: Firebase Firestore
-- **Auth**: Firebase Authentication
+- **Frontend:** React, Vite, Tailwind CSS, shadcn/ui, React Flow
+- **Backend:** Express.js, TypeScript
+- **AI:** Qwen Cloud (DashScope compatible API)
+- **Database:** Firebase Firestore
+- **Auth:** Firebase Authentication
+- **RAG:** text-embedding-v4, qwen3-rerank, cosine similarity search
 
 ## License
 
-Apache-2.0
+MIT
