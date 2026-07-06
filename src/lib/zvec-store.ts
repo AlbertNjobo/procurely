@@ -1,5 +1,6 @@
 import { ZVecCreateAndOpen, ZVecCollectionSchema, ZVecDataType, ZVecIndexType, ZVecMetricType } from "@zvec/zvec";
 import path from "path";
+import fs from "fs";
 
 const DATA_DIR = process.env.ZVEC_DATA_DIR || path.join(process.cwd(), "data", "zvec");
 
@@ -11,6 +12,12 @@ let memoryCollection: any = null;
 // ============================================================================
 export function initZvecStore() {
   try {
+    // If data dir exists from a previous schema, remove it to avoid conflicts
+    if (fs.existsSync(DATA_DIR)) {
+      fs.rmSync(DATA_DIR, { recursive: true, force: true });
+      console.log("[Zvec] Cleared old data directory for fresh schema");
+    }
+
     const kbSchema = new ZVecCollectionSchema({
       name: "kb_chunks",
       fields: [
