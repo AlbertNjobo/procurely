@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Procurely — AI Procurement Agent",
+    "subtitle": "Full-stack architecture with Qwen Cloud, Zvec, and Firebase",
+    "output": "procurely-architecture.html"
+  },
+  "components": [
+    { "id": "browser", "type": "frontend", "label": "Browser", "sublabel": "React + Vite + Tailwind", "pos": [40, 220], "size": [130, 60] },
+    { "id": "cloudflare", "type": "cloud", "label": "Cloudflare", "sublabel": "DNS + SSL Proxy", "pos": [240, 220], "size": [130, 60] },
+    { "id": "nginx", "type": "backend", "label": "Nginx", "sublabel": "Reverse Proxy :80/:443", "pos": [440, 220], "size": [140, 60] },
+    { "id": "app", "type": "backend", "label": "Express Server", "sublabel": "server.ts :3000", "pos": [650, 220], "size": [140, 60] },
+    { "id": "zvec", "type": "database", "label": "Zvec", "sublabel": "HNSW Vector Index", "pos": [650, 60], "size": [140, 60], "tag": "kb_chunks + memories" },
+    { "id": "qwen", "type": "external", "label": "Qwen Cloud", "sublabel": "DashScope API", "pos": [880, 100], "size": [140, 80], "tag": "chat + embed + rerank + vision" },
+    { "id": "firebase", "type": "database", "label": "Firebase", "sublabel": "Firestore + Auth", "pos": [880, 300], "size": [140, 60] },
+    { "id": "subagents", "type": "backend", "label": "Sub-Agents", "sublabel": "Risk / Bid / Compliance", "pos": [650, 380], "size": [140, 60], "tag": "qwen3.6-flash" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Alibaba Cloud SAS — Docker Compose", "wraps": ["nginx", "app", "zvec", "subagents"] }
+  ],
+  "connections": [
+    { "from": "browser", "to": "cloudflare", "label": "HTTPS", "variant": "emphasis" },
+    { "from": "cloudflare", "to": "nginx", "label": "HTTP :80" },
+    { "from": "nginx", "to": "app", "label": "proxy :3000" },
+    { "from": "app", "to": "zvec", "label": "vector search", "variant": "emphasis", "fromSide": "top", "toSide": "bottom", "labelAt": [720, 155] },
+    { "from": "app", "to": "qwen", "label": "chat + embed + rerank", "variant": "emphasis", "labelAt": [835, 56] },
+    { "from": "app", "to": "firebase", "label": "CRUD + auth" },
+    { "from": "app", "to": "subagents", "label": "delegate", "variant": "dashed", "labelAt": [720, 310] },
+    { "from": "browser", "to": "firebase", "label": "auth + realtime", "variant": "security", "labelAt": [525, 180] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Frontend", "items": ["React 19 + Vite + Tailwind CSS", "Streaming NDJSON for agent chat", "Role-based access (Requestor/Buyer/Finance/Admin)"] },
+    { "dot": "emerald", "title": "Backend", "items": ["Express server with 20+ agent tools", "HNSW vector search via Zvec (in-process)", "Multi-agent delegation to specialist sub-agents"] },
+    { "dot": "violet", "title": "AI Stack", "items": ["Qwen Cloud: qwen3.5-plus, text-embedding-v4, qwen3-rerank", "Real-time web search for supplier research", "Invoice OCR via vision model"] },
+    { "dot": "rose", "title": "Infrastructure", "items": ["Docker Compose: Nginx + Node.js + Zvec", "Cloudflare Flexible SSL (free HTTPS)", "Firebase: Firestore for data, Auth for login"] }
+  ]
+}
