@@ -107,3 +107,4 @@ lerna-debug.log*
 .claude/
 .agents/
 .mimocode/
+data/
