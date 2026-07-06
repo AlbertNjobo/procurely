@@ -532,7 +532,7 @@
 
     <!-- Main Diagram -->
     <div class="diagram-container">
-      <svg viewBox="0 0 1100 618" role="img" aria-label="Procurely — AI Procurement Agent — Qwen Cloud-powered procurement automation with 25 tools, RAG, multi-agent delegation, and speech-to-text (architecture diagram)">
+      <svg viewBox="0 0 1115 568" role="img" aria-label="Procurely — AI Procurement Agent — Qwen Cloud-powered procurement automation with 25 tools, RAG, multi-agent delegation, and speech-to-text (architecture diagram)">
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -556,24 +556,30 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Boundaries (behind everything) -->
-        <rect x="410" y="30" width="410" height="450" rx="12" class="c-region" stroke-width="1"/>
+        <rect x="410" y="30" width="410" height="270" rx="12" class="c-region" stroke-width="1"/>
         <text x="418" y="48" class="t-cloud" font-size="9" font-weight="600">Alibaba Cloud SAS — Docker Compose</text>
 
-        <rect x="850" y="20" width="210" height="530" rx="12" class="c-region" stroke-width="1"/>
-        <text x="858" y="38" class="t-cloud" font-size="9" font-weight="600">Qwen Cloud — 6 Models</text>
+        <rect x="620" y="360" width="200" height="110" rx="12" class="c-region" stroke-width="1"/>
+        <text x="628" y="378" class="t-cloud" font-size="9" font-weight="600">Firebase Cloud Services</text>
+
+        <rect x="850" y="0" width="225" height="165" rx="12" class="c-region" stroke-width="1"/>
+        <text x="858" y="18" class="t-cloud" font-size="9" font-weight="600">Qwen Cloud — RAG Services</text>
+
+        <rect x="850" y="170" width="225" height="330" rx="12" class="c-region" stroke-width="1"/>
+        <text x="858" y="188" class="t-cloud" font-size="9" font-weight="600">Qwen Cloud — Core AI Services</text>
 
         <!-- Connection paths (before components for correct z-order) -->
         <path d="M 170 250 L 240 250" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path d="M 370 250 L 440 250" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path d="M 580 250 L 650 250" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path d="M 720 220 L 720 120" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path d="M 790 250 L 827 250 Q 835 250 835 242 L 835 88 Q 835 80 843 80 L 880 80" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path d="M 790 250 L 827 250 Q 835 250 835 242 L 835 233 Q 835 225 843 225 L 880 225" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path d="M 790 250 L 827 250 Q 835 250 835 258 L 835 287 Q 835 295 843 295 L 880 295" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path d="M 790 250 L 827 250 Q 835 250 835 258 L 835 357 Q 835 365 843 365 L 880 365" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path d="M 790 250 L 827 250 Q 835 250 835 258 L 835 427 Q 835 435 843 435 L 880 435" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path d="M 790 250 L 827 250 Q 835 250 835 258 L 835 497 Q 835 505 843 505 L 880 505" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
-        <path d="M 720 280 L 720 400" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 720 280 L 720 390" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 790 250 L 827 250 Q 835 250 835 242 L 835 63 Q 835 55 843 55 L 880 55" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 790 250 L 827 250 Q 835 250 835 242 L 835 128 Q 835 120 843 120 L 880 120" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 790 250 L 827 250 Q 835 250 835 242 L 835 238 Q 835 230 843 230 L 880 230" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path d="M 790 250 L 827 250 Q 835 250 835 258 L 835 297 Q 835 305 843 305 L 880 305" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 790 250 L 827 250 Q 835 250 835 258 L 835 367 Q 835 375 843 375 L 880 375" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path d="M 790 250 L 827 250 Q 835 250 835 258 L 835 442 Q 835 450 843 450 L 880 450" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- Components -->
         <rect x="40" y="220" width="130" height="60" rx="6" class="c-mask"/>
@@ -602,45 +608,40 @@
         <text x="720" y="104" class="t-muted" font-size="9" text-anchor="middle">HNSW Vector Index</text>
         <text x="720" y="112" class="t-database" font-size="7" text-anchor="middle">kb_chunks + memories</text>
 
-        <rect x="650" y="400" width="140" height="60" rx="6" class="c-mask"/>
-        <rect x="650" y="400" width="140" height="60" rx="6" class="c-database" stroke-width="1.5"/>
-        <text x="720" y="428" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Firebase</text>
-        <text x="720" y="444" class="t-muted" font-size="9" text-anchor="middle">Firestore + Auth</text>
+        <rect x="650" y="390" width="140" height="60" rx="6" class="c-mask"/>
+        <rect x="650" y="390" width="140" height="60" rx="6" class="c-database" stroke-width="1.5"/>
+        <text x="720" y="418" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Firebase</text>
+        <text x="720" y="434" class="t-muted" font-size="9" text-anchor="middle">Firestore + Auth</text>
 
-        <rect x="880" y="50" width="150" height="60" rx="6" class="c-mask"/>
-        <rect x="880" y="50" width="150" height="60" rx="6" class="c-external" stroke-width="1.5"/>
-        <text x="955" y="78" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">qwen3.5-plus</text>
-        <text x="955" y="94" class="t-muted" font-size="9" text-anchor="middle">Chat + Tool Calling</text>
+        <rect x="880" y="30" width="165" height="50" rx="6" class="c-mask"/>
+        <rect x="880" y="30" width="165" height="50" rx="6" class="c-external" stroke-width="1.5"/>
+        <text x="962.5" y="53" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">text-embedding-v4</text>
+        <text x="962.5" y="69" class="t-muted" font-size="9" text-anchor="middle">1024d Embeddings</text>
 
-        <rect x="880" y="130" width="150" height="50" rx="6" class="c-mask"/>
-        <rect x="880" y="130" width="150" height="50" rx="6" class="c-external" stroke-width="1.5"/>
-        <text x="955" y="153" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">enable_search</text>
-        <text x="955" y="169" class="t-muted" font-size="9" text-anchor="middle">Web Research</text>
+        <rect x="880" y="95" width="165" height="50" rx="6" class="c-mask"/>
+        <rect x="880" y="95" width="165" height="50" rx="6" class="c-external" stroke-width="1.5"/>
+        <text x="962.5" y="118" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">qwen3-rerank</text>
+        <text x="962.5" y="134" class="t-muted" font-size="9" text-anchor="middle">Cross-Attention</text>
 
-        <rect x="880" y="200" width="150" height="50" rx="6" class="c-mask"/>
-        <rect x="880" y="200" width="150" height="50" rx="6" class="c-external" stroke-width="1.5"/>
-        <text x="955" y="223" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">text-embedding-v4</text>
-        <text x="955" y="239" class="t-muted" font-size="9" text-anchor="middle">1024d Vectors</text>
+        <rect x="880" y="200" width="165" height="60" rx="6" class="c-mask"/>
+        <rect x="880" y="200" width="165" height="60" rx="6" class="c-external" stroke-width="1.5"/>
+        <text x="962.5" y="228" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">qwen3.5-plus (Agent)</text>
+        <text x="962.5" y="244" class="t-muted" font-size="9" text-anchor="middle">Chat, Web &amp; Image Search</text>
 
-        <rect x="880" y="270" width="150" height="50" rx="6" class="c-mask"/>
-        <rect x="880" y="270" width="150" height="50" rx="6" class="c-external" stroke-width="1.5"/>
-        <text x="955" y="293" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">qwen3-rerank</text>
-        <text x="955" y="309" class="t-muted" font-size="9" text-anchor="middle">Cross-Attention</text>
+        <rect x="880" y="280" width="165" height="50" rx="6" class="c-mask"/>
+        <rect x="880" y="280" width="165" height="50" rx="6" class="c-external" stroke-width="1.5"/>
+        <text x="962.5" y="303" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">qwen3.5-plus (OCR)</text>
+        <text x="962.5" y="319" class="t-muted" font-size="9" text-anchor="middle">Invoice Extraction</text>
 
-        <rect x="880" y="340" width="150" height="50" rx="6" class="c-mask"/>
-        <rect x="880" y="340" width="150" height="50" rx="6" class="c-external" stroke-width="1.5"/>
-        <text x="955" y="363" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">qwen3.5-omni-flash</text>
-        <text x="955" y="379" class="t-muted" font-size="9" text-anchor="middle">Speech-to-Text</text>
+        <rect x="880" y="350" width="165" height="50" rx="6" class="c-mask"/>
+        <rect x="880" y="350" width="165" height="50" rx="6" class="c-external" stroke-width="1.5"/>
+        <text x="962.5" y="373" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">qwen3.5-omni-flash</text>
+        <text x="962.5" y="389" class="t-muted" font-size="9" text-anchor="middle">Speech-to-Text</text>
 
-        <rect x="880" y="410" width="150" height="50" rx="6" class="c-mask"/>
-        <rect x="880" y="410" width="150" height="50" rx="6" class="c-external" stroke-width="1.5"/>
-        <text x="955" y="433" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">qwen3.5-plus</text>
-        <text x="955" y="449" class="t-muted" font-size="9" text-anchor="middle">Invoice OCR</text>
-
-        <rect x="880" y="480" width="150" height="50" rx="6" class="c-mask"/>
-        <rect x="880" y="480" width="150" height="50" rx="6" class="c-external" stroke-width="1.5"/>
-        <text x="955" y="503" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">qwen3.6-flash</text>
-        <text x="955" y="519" class="t-muted" font-size="9" text-anchor="middle">Sub-Agent Specialist</text>
+        <rect x="880" y="420" width="165" height="60" rx="6" class="c-mask"/>
+        <rect x="880" y="420" width="165" height="60" rx="6" class="c-external" stroke-width="1.5"/>
+        <text x="962.5" y="448" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">qwen3.6-flash (Agents)</text>
+        <text x="962.5" y="464" class="t-muted" font-size="9" text-anchor="middle">Risk, Bid &amp; Comp Specialists</text>
 
         <!-- Connection labels -->
         <rect x="188" y="230" width="34" height="14" rx="3" class="c-mask"/>
@@ -649,35 +650,35 @@
         <text x="405" y="240" class="t-muted" font-size="8" text-anchor="middle">HTTP :80</text>
         <rect x="583.6" y="230" width="62.8" height="14" rx="3" class="c-mask"/>
         <text x="615" y="240" class="t-muted" font-size="8" text-anchor="middle">proxy :3000</text>
-        <rect x="683.8" y="145" width="72.4" height="14" rx="3" class="c-mask"/>
-        <text x="720" y="155" class="t-backend" font-size="8" text-anchor="middle">vector search</text>
-        <rect x="801.2" y="145" width="67.6" height="14" rx="3" class="c-mask"/>
-        <text x="835" y="155" class="t-backend" font-size="8" text-anchor="middle">chat + tools</text>
-        <rect x="806" y="217.5" width="58" height="14" rx="3" class="c-mask"/>
-        <text x="835" y="227.5" class="t-muted" font-size="8" text-anchor="middle">embeddings</text>
-        <rect x="808.4" y="252.5" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
-        <text x="835" y="262.5" class="t-muted" font-size="8" text-anchor="middle">reranking</text>
-        <rect x="806" y="287.5" width="58" height="14" rx="3" class="c-mask"/>
-        <text x="835" y="297.5" class="t-muted" font-size="8" text-anchor="middle">transcribe</text>
-        <rect x="820" y="322.5" width="30" height="14" rx="3" class="c-mask"/>
-        <text x="835" y="332.5" class="t-muted" font-size="8" text-anchor="middle">OCR</text>
-        <rect x="785.8" y="300" width="48.4" height="14" rx="3" class="c-mask"/>
-        <text x="810" y="310" class="t-messagebus" font-size="8" text-anchor="middle">delegate</text>
-        <rect x="688.6" y="284" width="62.8" height="14" rx="3" class="c-mask"/>
-        <text x="720" y="294" class="t-muted" font-size="8" text-anchor="middle">CRUD + auth</text>
+        <rect x="683.8" y="130" width="72.4" height="14" rx="3" class="c-mask"/>
+        <text x="720" y="140" class="t-backend" font-size="8" text-anchor="middle">vector search</text>
+        <rect x="688.6" y="335" width="62.8" height="14" rx="3" class="c-mask"/>
+        <text x="720" y="345" class="t-muted" font-size="8" text-anchor="middle">CRUD + Auth</text>
+        <rect x="806" y="145" width="58" height="14" rx="3" class="c-mask"/>
+        <text x="835" y="155" class="t-muted" font-size="8" text-anchor="middle">embeddings</text>
+        <rect x="808.4" y="175" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
+        <text x="835" y="185" class="t-muted" font-size="8" text-anchor="middle">reranking</text>
+        <rect x="801.2" y="230" width="67.6" height="14" rx="3" class="c-mask"/>
+        <text x="835" y="240" class="t-backend" font-size="8" text-anchor="middle">chat + tools</text>
+        <rect x="820" y="270" width="30" height="14" rx="3" class="c-mask"/>
+        <text x="835" y="280" class="t-muted" font-size="8" text-anchor="middle">OCR</text>
+        <rect x="806" y="305" width="58" height="14" rx="3" class="c-mask"/>
+        <text x="835" y="315" class="t-muted" font-size="8" text-anchor="middle">transcribe</text>
+        <rect x="796.4" y="350" width="77.2" height="14" rx="3" class="c-mask"/>
+        <text x="835" y="360" class="t-messagebus" font-size="8" text-anchor="middle">delegate tasks</text>
 
         <!-- Legend -->
-        <text x="40" y="589" class="t-primary" font-size="9" font-weight="600">Legend</text>
-        <rect x="40" y="594" width="14" height="9" rx="2" class="c-frontend" stroke-width="1"/>
-        <text x="60" y="602" class="t-muted" font-size="8">Frontend</text>
-        <rect x="138" y="594" width="14" height="9" rx="2" class="c-cloud" stroke-width="1"/>
-        <text x="158" y="602" class="t-muted" font-size="8">Cloud</text>
-        <rect x="221" y="594" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
-        <text x="241" y="602" class="t-muted" font-size="8">Backend</text>
-        <rect x="314" y="594" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
-        <text x="334" y="602" class="t-muted" font-size="8">Database</text>
-        <rect x="412" y="594" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
-        <text x="432" y="602" class="t-muted" font-size="8">External</text>
+        <text x="40" y="539" class="t-primary" font-size="9" font-weight="600">Legend</text>
+        <rect x="40" y="544" width="14" height="9" rx="2" class="c-frontend" stroke-width="1"/>
+        <text x="60" y="552" class="t-muted" font-size="8">Frontend</text>
+        <rect x="138" y="544" width="14" height="9" rx="2" class="c-cloud" stroke-width="1"/>
+        <text x="158" y="552" class="t-muted" font-size="8">Cloud</text>
+        <rect x="221" y="544" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
+        <text x="241" y="552" class="t-muted" font-size="8">Backend</text>
+        <rect x="314" y="544" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
+        <text x="334" y="552" class="t-muted" font-size="8">Database</text>
+        <rect x="412" y="544" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
+        <text x="432" y="552" class="t-muted" font-size="8">External</text>
       </svg>
     </div>
 
@@ -686,54 +687,52 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>Frontend</h3>
+          <h3>Frontend (React 19 + Vite)</h3>
         </div>
         <ul>
-          <li>&bull; React 19 + Vite + Tailwind CSS</li>
-          <li>&bull; Streaming NDJSON agent chat</li>
-          <li>&bull; Speech-to-text via mic button</li>
-          <li>&bull; Role-based access (Requestor/Buyer/Finance/Admin)</li>
+          <li>&bull; Key pages: Agent Chat, Dashboard, Intake, RFQs, Requisitions, Request Tracker, Suppliers, Vendor Portal, Workflow Designer, Knowledge Base</li>
+          <li>&bull; Streaming NDJSON response parsing and interactive widgets</li>
+          <li>&bull; Web Audio API capturing and converting speech to base64</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>Backend</h3>
+          <h3>Backend (server.ts + Express)</h3>
         </div>
         <ul>
-          <li>&bull; Express server with 25 agent tools</li>
-          <li>&bull; HNSW vector search via Zvec (in-process)</li>
-          <li>&bull; Multi-agent: main agent delegates to specialist sub-agents</li>
-          <li>&bull; Chat history with Firestore persistence</li>
+          <li>&bull; Node.js Express backend executing 25 agent-accessible tools</li>
+          <li>&bull; In-process vector search via Zvec using HNSW index and WAL persistence</li>
+          <li>&bull; Multi-Agent delegation protocol dispatching subtasks dynamically</li>
+          <li>&bull; Comprehensive JWT/Firebase authentication middleware</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot violet"></div>
-          <h3>Qwen Cloud AI Stack</h3>
+          <h3>Qwen Cloud AI Integration</h3>
         </div>
         <ul>
-          <li>&bull; qwen3.5-plus: chat, tool calling, web search, vision, negotiation</li>
-          <li>&bull; text-embedding-v4: 1024d embeddings for RAG</li>
-          <li>&bull; qwen3-rerank: cross-attention result reranking</li>
-          <li>&bull; qwen3.5-omni-flash: speech-to-text transcription</li>
-          <li>&bull; qwen3.6-flash: specialist sub-agent tasks (risk/bid/compliance)</li>
-          <li>&bull; enable_search: real-time supplier and market research</li>
+          <li>&bull; qwen3.5-plus: Core chatbot reasoning and tool invocation</li>
+          <li>&bull; text-embedding-v4 &amp; qwen3-rerank: Vector lookup &amp; high-accuracy reranking</li>
+          <li>&bull; qwen3.5-omni-flash: Direct speech-to-text base64 audio decoding</li>
+          <li>&bull; qwen3.6-flash: Autonomous sub-agents (Risk Analyst, Bid Optimizer, Compliance Checker)</li>
+          <li>&bull; enable_search: Dynamic web crawling for market and vendor research</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot rose"></div>
-          <h3>Infrastructure</h3>
+          <h3>Infrastructure &amp; Storage</h3>
         </div>
         <ul>
-          <li>&bull; Docker Compose: Nginx + Node.js + Zvec</li>
-          <li>&bull; Cloudflare Flexible SSL (free HTTPS)</li>
-          <li>&bull; Firebase: Firestore for data, Auth for login</li>
-          <li>&bull; Alibaba Cloud SAS: 2 vCPU, 2 GiB</li>
+          <li>&bull; Alibaba Cloud SAS (2 vCPU, 2 GiB) orchestrating Docker container</li>
+          <li>&bull; Cloudflare DNS &amp; SSL providing proxy caching and HTTPS termination</li>
+          <li>&bull; Nginx acting as reverse proxy forwarding SSE and REST endpoints</li>
+          <li>&bull; Firebase Firestore (realtime DB) &amp; Firebase Auth (identity management)</li>
         </ul>
       </div>
     </div>

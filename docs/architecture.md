@@ -5,7 +5,7 @@
 ```mermaid
 graph TB
     subgraph Browser["Browser — React + Vite + Tailwind"]
-        UI[Dashboard / Agent Chat / Suppliers / RFQs / KB]
+        UI[Dashboard / Agent Chat / Suppliers / RFQs / Requisitions / Request Tracker / Vendor Portal / Workflow Designer / KB]
         MIC[Mic Button<br/>Speech-to-Text]
     end
 
@@ -28,18 +28,21 @@ graph TB
     end
 
     subgraph QwenCloud["Qwen Cloud — DashScope API"]
-        Chat[qwen3.5-plus<br/>Chat + Tool Calling<br/>+ Web Search]
-        Embed[text-embedding-v4<br/>1024d Vectors]
-        Rerank[qwen3-rerank<br/>Cross-Attention Reranking]
-        Vision[qwen3.5-plus<br/>Invoice OCR + Vision]
-        Speech[qwen3.5-omni-flash<br/>Speech-to-Text]
-        Search[enable_search<br/>Real-time Web Research]
-        Flash[qwen3.6-flash<br/>Sub-Agent Specialist]
+        subgraph RAGServices["RAG Services"]
+            Embed[text-embedding-v4<br/>1024d Vectors]
+            Rerank[qwen3-rerank<br/>Cross-Attention Reranking]
+        end
+        subgraph CoreAIServices["Core AI Services"]
+            Chat[qwen3.5-plus (Agent)<br/>Chat, Web & Image Search]
+            Vision[qwen3.5-plus (OCR)<br/>Invoice Extraction]
+            Speech[qwen3.5-omni-flash<br/>Speech-to-Text]
+            Flash[qwen3.6-flash (Agents)<br/>Risk, Bid & Comp Specialists]
+        end
     end
 
     subgraph Firebase["Firebase"]
         Auth[Authentication]
-        FS[(Firestore<br/>suppliers / intakes / rfqs<br/>bids / purchaseOrders<br/>knowledgeBase / users)]
+        FS[(Firestore<br/>suppliers / purchaseRequisitions / rfqs / bids<br/>purchaseOrders / goodsReceipts / invoices<br/>procurementCatalog / knowledgeBase / users / agentMemory)]
     end
 
     subgraph Specialist["Multi-Agent System"]
@@ -59,15 +62,15 @@ graph TB
     Chat -->|tool_calls| Tools
     Tools --> FS
     Tools --> Vision
-    Tools --> Search
+    Tools --> Flash
     RAG --> Embed
     RAG --> Rerank
     Agent --> RAG
     RAG --> ZVEC
     Memory --> ZVEC
-    Tools --> Risk
-    Tools --> Bid
-    Tools --> Compliance
+    Flash --> Risk
+    Flash --> Bid
+    Flash --> Compliance
     Transcribe --> Speech
     UI --> Auth
     Auth --> FS
@@ -196,13 +199,19 @@ graph TB
 
 | Collection | Purpose | Key Fields |
 |------------|---------|------------|
-| `suppliers` | Supplier directory | name, category, risk, status, compliance |
-| `purchaseRequisitions` | Intake requests | title, department, status, totalAmount, auditTrail |
-| `rfqs` | Requests for Quotation | title, description, supplierIds, dueDate, status |
-| `bids` | Supplier bid responses | rfqId, vendorId, amount, proposal, status |
-| `purchaseOrders` | Committed purchases | supplierId, items, totalAmount, status |
-| `knowledgeBase` | Policies & documents | title, content, category |
-| `users` | User profiles | uid, email, displayName, role |
+| `suppliers` | Supplier directory | name, category, risk, status, compliance, userId |
+| `purchaseRequisitions` | Procurement intake & requisitions | title, department, status, totalAmount, auditTrail, createdBy |
+| `rfqs` | Requests for Quotation | title, description, supplierIds, dueDate, status, createdBy |
+| `bids` | Supplier bid responses | rfqId, vendorId, amount, proposal, status, reasoning |
+| `purchaseOrders` | Committed purchases | supplierId, items, totalAmount, status, rfqId |
+| `goodsReceipts` | Delivery confirmation records | purchaseOrderId, itemsReceived, status, receivedAt |
+| `invoices` | Extracted invoice document records | purchaseOrderId, supplierId, items, totalAmount, parsedFields, status |
+| `procurementCatalog` | Seeded directory of standard items | name, description, sku, category, price, imageUrl, rating |
+| `knowledgeBase` | Corporate policies and standard procedures | title, content, category, userId |
+| `users` | User accounts and profiles | uid, email, displayName, role |
+| `agentMemory` | Chat companion memory contexts | userId, content, type, createdAt |
+| `audit_events` | Traceable logs of procurement actions | action, userId, entityId, details, timestamp |
+| `userChats` | Chat session history threads | userId, conversationId, messages, updatedAt |
 
 ## Zvec Collections
 
