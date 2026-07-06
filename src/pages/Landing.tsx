@@ -172,9 +172,9 @@ export function Landing() {
           transition={reduce ? { duration: 0 } : { duration: 0.8, delay: 0.4 }}
           className="mt-16 relative hero-mockup-container"
         >
-          <img 
-            src="/dashboard-hero.png" 
-            alt="Hero mockup" 
+          <img
+            src="/dashboard-hero.png"
+            alt="Procurely Dashboard"
             className="w-full max-w-[1100px] mx-auto border border-[#ededed] bg-white hero-mockup-3d"
           />
         </motion.div>
@@ -737,7 +737,7 @@ export function Landing() {
           <a href="#features" className="hover:text-[#191919] transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-950 rounded-xs">Features</a>
           <a href="#how-it-works" className="hover:text-[#191919] transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-950 rounded-xs">How it works</a>
           <a href="#pricing" className="hover:text-[#191919] transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-950 rounded-xs">Pricing</a>
-          <a href="mailto:info@atlas.ai" className="hover:text-[#191919] transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-950 rounded-xs">Contact</a>
+          <a href="mailto:info@procurely.ai" className="hover:text-[#191919] transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-950 rounded-xs">Contact</a>
         </div>
       </footer>
     </div>
