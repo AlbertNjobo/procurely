@@ -22,6 +22,42 @@ import { UploadPromptCard } from '../components/agent/UploadPromptCard';
 import { SelectedSupplierCard } from '../components/agent/SelectedSupplierCard';
 import { ImpactAnalysisCard } from '../components/agent/ImpactAnalysisCard';
 
+// ─── Chat UI Helpers ──────────────────────────────────────────────────────────
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+      title={copied ? 'Copied!' : 'Copy message'}
+    >
+      {copied ? <CheckCircle className="h-3.5 w-3.5 text-green-500" /> : <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>}
+    </button>
+  );
+}
+
+function formatTimestamp(ts?: number) {
+  if (!ts) return '';
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return new Date(ts).toLocaleDateString();
+}
+
+const SUGGESTED_PROMPTS = [
+  { icon: '💻', text: 'I need 10 laptops under $15K for engineering' },
+  { icon: '🔍', text: 'Find IT software suppliers with low risk' },
+  { icon: '📋', text: 'Check procurement policy for travel expenses' },
+  { icon: '☁️', text: 'Research cloud hosting prices for our team' },
+];
+
 type MessageType = 'text' | 'bid-matrix' | 'supplier-form' | 'process-timeline' | 'item-details' | 'upload-prompt' | 'selected-supplier' | 'impact-analysis' | 'approval' | 'qualification-questions' | 'intake-confirmation' | 'supplier-confirmation' | 'rfq-confirmation' | 'bid-confirmation' | 'po-confirmation';
 
 interface ToolCall {
@@ -36,6 +72,7 @@ interface Message {
   type?: MessageType;
   tool_calls?: ToolCall[];
   qualificationData?: any[];
+  timestamp?: number;
 }
 
 function QualificationQuestions({ questions, onSelect }: { questions: any[], onSelect: (text: string) => void }) {
@@ -920,7 +957,7 @@ export function AgentChat() {
     const textToSend = typeof overrideInput === 'string' ? overrideInput : input;
     if (!textToSend.trim()) return;
 
-    const userMessage = { role: 'user' as const, content: textToSend, type: 'text' as MessageType };
+    const userMessage = { role: 'user' as const, content: textToSend, type: 'text' as MessageType, timestamp: Date.now() };
     setMessages(prev => [...prev, userMessage]);
     if (typeof overrideInput !== 'string') {
       setInput('');
@@ -982,7 +1019,7 @@ export function AgentChat() {
       let buffer = "";
 
       // Add a placeholder message for the model
-      setMessages(prev => [...prev, { role: 'model', content: '', type: 'text', tool_calls: [] }]);
+      setMessages(prev => [...prev, { role: 'model', content: '', type: 'text', tool_calls: [], timestamp: Date.now() }]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -1577,11 +1614,38 @@ export function AgentChat() {
         </CardHeader>
         <CardContent className="flex-1 overflow-hidden p-0 relative bg-muted/20">
           <div className="h-full overflow-y-auto p-4 md:p-6" ref={scrollRef}>
+            {/* Empty state: suggested prompts */}
+            {messages.length === 0 && !isLoading && (
+              <div className="flex flex-col items-center justify-center h-full gap-6 py-12">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
+                  <Bot className="h-7 w-7 text-white" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-1">How can I help with procurement?</h3>
+                  <p className="text-sm text-muted-foreground">I can source suppliers, negotiate prices, and manage your procure-to-pay workflow.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg w-full">
+                  {SUGGESTED_PROMPTS.map((prompt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSend(prompt.text)}
+                      className="flex items-start gap-3 p-3.5 rounded-xl border bg-card hover:bg-muted/50 hover:border-violet-300 dark:hover:border-violet-700 transition-all text-left group"
+                    >
+                      <span className="text-lg mt-0.5">{prompt.icon}</span>
+                      <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{prompt.text}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Messages */}
             <div className="flex flex-col gap-6 pb-4">
               {messages.map((msg, idx) => {
                 const isStreaming = isLoading && idx === messages.length - 1;
+                const isLastModel = msg.role === 'model' && idx === messages.length - 1;
                 return (
-                  <div key={idx} className={`flex gap-3 max-w-[95%] md:max-w-[85%] ${msg.role === 'user' ? 'self-end flex-row-reverse' : 'self-start w-full'}`}>
+                  <div key={idx} className={`flex gap-3 max-w-[95%] md:max-w-[85%] group ${msg.role === 'user' ? 'self-end flex-row-reverse' : 'self-start w-full'}`}>
                     {msg.role === 'user' && (
                       <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 bg-primary text-primary-foreground hidden md:flex">
                         <User className="h-4 w-4" />
@@ -1589,18 +1653,50 @@ export function AgentChat() {
                     )}
                     <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} w-full`}>
                       {msg.role === 'user' ? (
-                        <div className="p-3.5 rounded-2xl bg-primary text-primary-foreground rounded-tr-sm shadow-sm">
-                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-0 prose-headings:my-0">
-                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <div className="relative">
+                          <div className="p-3.5 rounded-2xl bg-primary text-primary-foreground rounded-tr-sm shadow-sm">
+                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-0 prose-headings:my-0">
+                              <ReactMarkdown>{msg.content}</ReactMarkdown>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 justify-end">
+                            {msg.timestamp && <span className="text-[10px] text-muted-foreground">{formatTimestamp(msg.timestamp)}</span>}
+                            <CopyButton text={msg.content} />
                           </div>
                         </div>
                       ) : (
-                        <ExpandableBotMessage msg={msg} renderCard={renderCard} isStreaming={isStreaming} onSelect={handleSend} />
+                        <div className="w-full">
+                          <ExpandableBotMessage msg={msg} renderCard={renderCard} isStreaming={isStreaming} onSelect={handleSend} />
+                          <div className="flex items-center gap-2 mt-1">
+                            {msg.timestamp && <span className="text-[10px] text-muted-foreground">{formatTimestamp(msg.timestamp)}</span>}
+                            <CopyButton text={msg.content} />
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
                 );
               })}
+              {/* Regenerate button */}
+              {!isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'model' && (
+                <div className="flex justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+                      if (lastUserMsg) {
+                        setMessages(prev => prev.slice(0, -1));
+                        handleSend(lastUserMsg.content);
+                      }
+                    }}
+                    className="gap-2 text-xs text-muted-foreground"
+                  >
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    Regenerate
+                  </Button>
+                </div>
+              )}
               {isLoading && messages[messages.length - 1]?.role !== 'model' && (
                 <div className="flex gap-3 max-w-[95%] md:max-w-[85%] self-start w-full">
                   <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shrink-0 mt-1 shadow-sm">
@@ -1626,66 +1722,64 @@ export function AgentChat() {
             className="flex flex-col w-full gap-2 relative"
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
           >
-            <div className="flex gap-2">
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileUpload} 
-                className="hidden" 
-                accept=".pdf,.txt,.md,.docx,.xlsx" 
-              />
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon" 
-                className="shrink-0 rounded-full text-muted-foreground hover:bg-muted"
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
+              accept=".pdf,.txt,.md,.docx,.xlsx"
+            />
+            <div className="flex items-end gap-2 border rounded-2xl bg-muted/30 px-3 py-2 focus-within:ring-2 focus-within:ring-violet-500/50 focus-within:border-violet-500/50 transition-all">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0 h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground mb-0.5"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading || isLoading}
               >
-                {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5" />}
+                {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               </Button>
-              <div className="relative flex-1 flex items-center">
-                {isRecording && (
-                  <div className="absolute inset-y-0 left-0 right-20 bg-background/80 backdrop-blur-sm rounded-l-full flex items-center pl-4 z-10 border-y border-l border-muted-foreground/20">
-                    <span className="text-amber-600 font-medium text-sm mr-3">Listening...</span>
-                    <div className="flex items-center gap-1 h-5">
-                      <div className="w-1 h-full bg-amber-500 rounded-full animate-waveform [animation-delay:-0.4s]" />
-                      <div className="w-1 h-full bg-amber-500 rounded-full animate-waveform [animation-delay:-0.2s]" />
-                      <div className="w-1 h-full bg-amber-500 rounded-full animate-waveform [animation-delay:-0.6s]" />
-                      <div className="w-1 h-full bg-amber-500 rounded-full animate-waveform [animation-delay:-0.1s]" />
-                      <div className="w-1 h-full bg-amber-500 rounded-full animate-waveform [animation-delay:-0.5s]" />
-                    </div>
-                  </div>
-                )}
-                <Input
-                  placeholder="Describe your business needs..."
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  className="flex-1 rounded-full pl-4 pr-24 bg-muted/50 border-border/60 focus-visible:ring-violet-500 h-11"
-                  disabled={isLoading}
-                />
-                <div className="absolute right-1.5 flex items-center gap-1 z-20">
-                  <Button 
-                    type="button" 
-                    onClick={toggleRecording}
-                    variant="ghost"
-                    size="icon"
-                    className={`h-9 w-9 rounded-full ${isRecording ? 'text-red-500 hover:text-red-600 bg-red-100 hover:bg-red-200 animate-pulse' : 'text-muted-foreground hover:text-foreground'}`}
-                  >
-                    {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isLoading || !input.trim()}
-                    size="icon"
-                    className="h-9 w-9 rounded-full bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-
+              <textarea
+                value={input}
+                onChange={e => {
+                  setInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Message Procurely..."
+                rows={1}
+                className="flex-1 resize-none bg-transparent border-0 outline-none text-sm min-h-[24px] max-h-[120px] py-1 placeholder:text-muted-foreground"
+                disabled={isLoading}
+                style={{ height: 'auto' }}
+              />
+              <div className="flex items-center gap-1 mb-0.5">
+                <Button
+                  type="button"
+                  onClick={toggleRecording}
+                  variant="ghost"
+                  size="icon"
+                  className={`h-8 w-8 rounded-full ${isRecording ? 'text-red-500 hover:text-red-600 bg-red-100 hover:bg-red-200 animate-pulse' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                >
+                  {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading || !input.trim()}
+                  size="icon"
+                  className="h-8 w-8 rounded-full bg-violet-600 hover:bg-violet-700 text-white shadow-sm disabled:opacity-30"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
               </div>
             </div>
+            <p className="text-[10px] text-muted-foreground text-center">Procurely can make mistakes. Check important info.</p>
           </form>
         </CardFooter>
       </Card>
