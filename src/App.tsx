@@ -48,8 +48,8 @@ function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:p-2 border-b">
         <div className="flex items-center gap-2 font-bold text-xl group-data-[collapsible=icon]:justify-center">
-          <img src="/atlas-icon.svg" alt="Atlas" className="h-6 w-6 shrink-0" />
-          <span className="group-data-[collapsible=icon]:hidden">Atlas</span>
+          <img src="/procurely-icon.svg" alt="Procurely" className="h-6 w-6 shrink-0" />
+          <span className="group-data-[collapsible=icon]:hidden">Procurely</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -181,8 +181,8 @@ function AppLayout() {
     <div className="flex flex-col flex-1 min-w-0 overflow-hidden h-screen">
       <header className="md:hidden flex h-14 items-center justify-between border-b bg-background px-4 shrink-0">
         <div className="flex items-center gap-2 font-bold text-lg">
-          <img src="/atlas-icon.svg" alt="Atlas" className="h-5 w-5" />
-          <span>Atlas</span>
+          <img src="/procurely-icon.svg" alt="Procurely" className="h-5 w-5" />
+          <span>Procurely</span>
         </div>
         <div className="flex items-center gap-1">
           <NotificationsDropdown />

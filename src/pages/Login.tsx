@@ -17,9 +17,9 @@ export function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src="/atlas-logo.svg" alt="Atlas" className="h-10" />
+            <img src="/procurely-logo.svg" alt="Procurely" className="h-10" />
           </div>
-          <CardTitle className="text-xl">Welcome to Atlas</CardTitle>
+          <CardTitle className="text-xl">Welcome to Procurely</CardTitle>
           <CardDescription>AI-Powered Procurement Platform</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">

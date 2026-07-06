@@ -1,6 +1,6 @@
 // ============================================================================
 // Specialist Agent Prompts
-// These prompts are used when the main Atlas agent delegates to sub-agents
+// These prompts are used when the main Procurely agent delegates to sub-agents
 // ============================================================================
 
 export const specialistPrompts = {

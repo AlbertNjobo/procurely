@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const demoLogin = async () => {
     try {
-      await signInWithEmailAndPassword(auth, 'demo@atlas.procurement', 'DemoAtlas2026!');
+      await signInWithEmailAndPassword(auth, 'demo@procurely.app', 'DemoProcurely2026!');
     } catch (error: any) {
       console.error('Demo login error:', error);
     }

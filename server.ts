@@ -455,7 +455,7 @@ app.post("/api/agent/chat", async (req, res) => {
         content: [
           {
             type: "text",
-            text: `You are Atlas, an AI Autopilot Procurement Agent powered by Qwen Cloud.
+            text: `You are Procurely, an AI Autopilot Procurement Agent powered by Qwen Cloud.
 You help users with Intake Management, Supplier Management, Risk and Compliance, and full Procure-to-Pay workflows.
 Be professional, structured, and helpful. You analyze supplier forms and generate bid matrix analysis when requested.
 

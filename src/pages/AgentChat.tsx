@@ -649,7 +649,7 @@ interface ChatSummary {
 
 const WELCOME_MSG: Message = {
   role: 'model',
-  content: `Hello! I am Atlas, your AI Procurement Agent. I can help you orchestrate intake, source suppliers autonomously, and negotiate contracts.`,
+  content: `Hello! I am Procurely, your AI Procurement Agent. I can help you orchestrate intake, source suppliers autonomously, and negotiate contracts.`,
   type: 'text'
 };
 
@@ -1567,7 +1567,7 @@ export function AgentChat() {
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
                 <Bot className="h-4 w-4 text-white" />
               </div>
-              Atlas
+              Procurely
             {useContext && (
               <Badge variant="secondary" className="text-[10px] bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border-violet-200 dark:border-violet-800 ml-1">
                 KB Active

@@ -71,7 +71,7 @@ function IntegrationsGraph() {
 
       {/* Center Node */}
       <div className="w-24 h-24 bg-[#191919] border border-neutral-800 shadow-2xl flex items-center justify-center relative">
-        <img src="/atlas-icon.svg" className="h-10 w-10 filter invert" alt="Atlas" />
+        <img src="/procurely-icon.svg" className="h-10 w-10 filter invert" alt="Procurely" />
         <div className="absolute inset-0 border border-neutral-700 animate-ping opacity-10" />
       </div>
 
@@ -103,8 +103,8 @@ export function Landing() {
       {/* Navigation */}
       <nav className="fixed top-4 w-[90%] max-w-[1224px] z-50 bg-[#fcfcfc]/80 backdrop-blur-md border border-[#efefef] rounded-none left-1/2 -translate-x-1/2 px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src="/atlas-icon.svg" alt="Atlas" className="h-6 w-6" />
-          <span className="font-space font-bold text-lg text-[#191919]">Atlas</span>
+          <img src="/procurely-icon.svg" alt="Procurely" className="h-6 w-6" />
+          <span className="font-space font-bold text-lg text-[#191919]">Procurely</span>
         </div>
         <div className="hidden md:flex items-center gap-8 text-sm font-space">
           <a href="#features" className="hover:text-[#191919] transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-950 rounded-xs">Features</a>
@@ -145,7 +145,7 @@ export function Landing() {
           transition={reduce ? { duration: 0 } : { duration: 0.6, delay: 0.2 }}
           className="text-lg text-[#737373] max-w-2xl mx-auto mb-10 leading-relaxed font-sans"
         >
-          Atlas turns one natural language request into supplier sourcing, AI price negotiation, purchase orders, and invoice matching, cutting procurement cycles from weeks to minutes.
+          Procurely turns one natural language request into supplier sourcing, AI price negotiation, purchase orders, and invoice matching, cutting procurement cycles from weeks to minutes.
         </motion.p>
         <motion.div 
           initial={reduce ? false : { opacity: 0, y: 20 }}
@@ -277,7 +277,7 @@ export function Landing() {
                 One autonomous procurement agent
               </h3>
               <p className="font-sans text-[#737373] text-sm leading-relaxed">
-                Atlas researches suppliers, negotiates pricing, routes approvals, creates POs, and checks invoices from a single request.
+                Procurely researches suppliers, negotiates pricing, routes approvals, creates POs, and checks invoices from a single request.
               </p>
             </div>
             <img 
@@ -326,7 +326,7 @@ export function Landing() {
                 Turn a request into qualified supplier options
               </h4>
               <p className="font-sans text-[#737373] text-base leading-relaxed">
-                Atlas uses real-time web research, cross-session memory, and your approval policy to shortlist vendors with evidence your team can audit.
+                Procurely uses real-time web research, cross-session memory, and your approval policy to shortlist vendors with evidence your team can audit.
               </p>
               <button 
                 onClick={() => navigate('/login')}
@@ -390,7 +390,7 @@ export function Landing() {
                 Create POs, match invoices, and keep the audit trail
               </h4>
               <p className="font-sans text-[#737373] text-base leading-relaxed">
-                Atlas generates purchase orders, reads invoices with OCR, performs 3-way matching, and keeps Firebase RBAC-backed audit trails for finance review.
+                Procurely generates purchase orders, reads invoices with OCR, performs 3-way matching, and keeps Firebase RBAC-backed audit trails for finance review.
               </p>
               <button 
                 onClick={() => navigate('/login')}
@@ -463,10 +463,10 @@ export function Landing() {
           className="text-center max-w-2xl mx-auto mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-sans font-light text-[#191919] tracking-[-0.03em] mb-6">
-            How Atlas turns a request into completed procurement
+            How Procurely turns a request into completed procurement
           </h2>
           <p className="text-lg text-[#737373] leading-relaxed font-sans">
-            Ask for what you need once. Atlas coordinates the research, controls, documents, and finance checks.
+            Ask for what you need once. Procurely coordinates the research, controls, documents, and finance checks.
           </p>
         </motion.div>
 
@@ -552,7 +552,7 @@ export function Landing() {
             Works with your procurement and finance stack
           </h2>
           <p className="text-lg text-[#737373] leading-relaxed font-sans">
-            Atlas brings supplier research, policy memory, approval gates, and invoice controls into one autonomous P2P layer.
+            Procurely brings supplier research, policy memory, approval gates, and invoice controls into one autonomous P2P layer.
           </p>
         </div>
 
@@ -710,7 +710,7 @@ export function Landing() {
           transition={reduce ? { duration: 0 } : { duration: 0.6, delay: 0.1 }}
           className="text-lg text-[#737373] max-w-xl mx-auto mb-10 leading-relaxed font-sans"
         >
-          Let Atlas turn procurement requests into approved spend, matched invoices, and clean audit trails.
+          Let Procurely turn procurement requests into approved spend, matched invoices, and clean audit trails.
         </motion.p>
         <motion.button
           onClick={() => navigate('/login')}
@@ -730,8 +730,8 @@ export function Landing() {
       <footer className="relative max-w-[1224px] mx-auto border-x border-b border-[#ededed] py-12 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-6 bg-[#fcfcfc]">
         <CornerPlus />
         <div className="flex items-center gap-2">
-          <img src="/atlas-icon.svg" alt="Atlas" className="h-5 w-5" />
-          <span className="text-xs text-[#737373] font-space font-medium">Copyright 2026 Atlas AI Inc. All rights reserved.</span>
+          <img src="/procurely-icon.svg" alt="Procurely" className="h-5 w-5" />
+          <span className="text-xs text-[#737373] font-space font-medium">Copyright 2026 Procurely AI Inc. All rights reserved.</span>
         </div>
         <div className="flex items-center gap-8 text-xs font-space">
           <a href="#features" className="hover:text-[#191919] transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-neutral-950 rounded-xs">Features</a>
