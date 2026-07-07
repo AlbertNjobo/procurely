@@ -1009,15 +1009,22 @@ export function AgentChat() {
     try {
       let apiMessages = messages.filter(m => m.type === 'text' || !m.type).concat(userMessage).map(m => ({ role: m.role, parts: [{ text: m.content }] }));
       
-      // Load workflow from localStorage (saved by WorkflowDesigner)
+      // Load workflow from localStorage (saved by Wayflow WorkflowDesigner)
       let workflowNodes: any[] = [];
       let workflowEdges: any[] = [];
       try {
-        const savedWorkflow = localStorage.getItem('workflow-designer-autosave');
+        const savedWorkflow = localStorage.getItem('wayflow-workflow-autosave');
         if (savedWorkflow) {
           const parsed = JSON.parse(savedWorkflow);
-          workflowNodes = parsed.nodes || [];
-          workflowEdges = parsed.edges || [];
+          // Wayflow stores Graph format: { nodes: Record<string, Node>, edges: Record<string, Edge> }
+          if (parsed.nodes && typeof parsed.nodes === 'object' && !Array.isArray(parsed.nodes)) {
+            workflowNodes = Object.values(parsed.nodes);
+            workflowEdges = Object.values(parsed.edges || {});
+          } else if (Array.isArray(parsed.nodes)) {
+            // Legacy ReactFlow format fallback
+            workflowNodes = parsed.nodes;
+            workflowEdges = parsed.edges || [];
+          }
         }
       } catch (e) {
         console.warn('Failed to load workflow from localStorage:', e);

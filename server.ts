@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import OpenAI from "openai";
 import "dotenv/config";
+import { executeNode, type WorkflowHandlerContext } from "./src/lib/workflow-handlers";
 import { agentTools } from "./src/lib/agent-tools";
 import { chunkText, chunkTextSmart, generateEmbeddings, generateQueryEmbedding, rerankResults } from "./src/lib/rag";
 import { initZvecStore, insertChunks, searchChunks as zvecSearch, insertMemory, searchMemories } from "./src/lib/zvec-store";
@@ -540,7 +541,8 @@ When processing requisitions:
 1. Use execute_workflow to route requisitions through the designed workflow
 2. Use evaluate_workflow_condition to evaluate condition nodes
 3. The workflow graph from WorkflowDesigner is available in context
-4. The agent follows the graph: trigger → condition → action → routing
+4. Node types supported: input (trigger), conditional (branching), human (approval gates), generatePO, checkBudget, notifyVendor, threeWayMatch
+5. The agent follows the graph: input → conditional → action nodes
 Always log which workflow path was taken for audit purposes.
 
 IMPORTANT: NEVER combine Qualifying, Recommending, and Intake Form phases. You MUST STOP and wait for the user's response between stages.${memoryText}${kbText}`,
@@ -1286,14 +1288,18 @@ Respond in JSON:
               result = JSON.stringify({ error: "Market research failed", fallback: "Use web search to find pricing." });
             }
           } else if (tc.name === 'execute_workflow') {
-            // Execute a workflow step based on the ReactFlow graph
+            // Execute a workflow step — supports both Wayflow and legacy ReactFlow formats
             const workflowNodes = context?.workflowNodes || [];
             const workflowEdges = context?.workflowEdges || [];
             const requisition = (context?.purchaseRequisitions || []).find((r: any) => r.id === args.requisition_id) ||
                                (context?.intakes || []).find((i: any) => i.id === args.requisition_id) || {};
 
-            // Find the trigger node or current node
-            const startNodeId = args.current_node_id || workflowNodes.find((n: any) => n.type === 'trigger')?.id;
+            // Detect format: Wayflow edges use sourceNodeId/targetNodeId, legacy uses source/target
+            const isWayflowFormat = workflowEdges.length > 0 && workflowEdges[0]?.sourceNodeId !== undefined;
+
+            // Find the start node — Wayflow uses 'input' type, legacy uses 'trigger'
+            const startNodeId = args.current_node_id ||
+              workflowNodes.find((n: any) => n.type === 'trigger' || n.type === 'input')?.id;
             const currentNode = workflowNodes.find((n: any) => n.id === startNodeId);
 
             if (!currentNode) {
@@ -1303,9 +1309,22 @@ Respond in JSON:
               });
             } else {
               // Walk through the workflow graph
-              const executionPath = [];
+              const executionPath: any[] = [];
               let nodeId = startNodeId;
-              let stepsRemaining = 10; // Safety limit
+              let stepsRemaining = 15; // Safety limit
+
+              const getEdgeTarget = (edge: any, portId: string) => {
+                return isWayflowFormat
+                  ? (edge.sourcePortId === portId ? edge.targetNodeId : null)
+                  : (edge.source === nodeId && edge.sourceHandle === portId ? edge.target : null);
+              };
+
+              const getFirstEdgeTarget = (fromNodeId: string) => {
+                const edge = isWayflowFormat
+                  ? workflowEdges.find((e: any) => e.sourceNodeId === fromNodeId)
+                  : workflowEdges.find((e: any) => e.source === fromNodeId);
+                return isWayflowFormat ? edge?.targetNodeId : edge?.target;
+              };
 
               while (nodeId && stepsRemaining > 0) {
                 const node = workflowNodes.find((n: any) => n.id === nodeId);
@@ -1314,28 +1333,50 @@ Respond in JSON:
                 const step: any = {
                   node_id: node.id,
                   type: node.type,
-                  label: node.data?.label,
-                  description: node.data?.description,
+                  label: node.label || node.data?.label,
+                  description: node.data?.description || node.data?.instructions,
                   status: 'completed'
                 };
 
-                // Evaluate conditions
-                if (node.type === 'condition') {
-                  const threshold = parseFloat(node.data?.threshold || '10000');
-                  const amount = parseFloat((requisition.amount || '0').replace(/[^0-9.]/g, ''));
-                  const conditionResult = amount > threshold;
-                  step.result = conditionResult;
-                  step.evaluation = `$${amount} ${conditionResult ? '>' : '<='} $${threshold}`;
+                // Handle different node types
+                if (node.type === 'condition' || node.type === 'conditional') {
+                  // Wayflow conditional: uses inputField, operator, comparisonValue
+                  const inputField = node.data?.inputField || 'amount';
+                  const operator = node.data?.operator || '>';
+                  const comparisonValue = parseFloat(node.data?.comparisonValue || node.data?.threshold || '10000');
+                  const fieldValue = parseFloat(String(requisition[inputField] || requisition.amount || '0').replace(/[^0-9.]/g, ''));
+                  let conditionResult = false;
+                  if (operator === '>') conditionResult = fieldValue > comparisonValue;
+                  else if (operator === '<') conditionResult = fieldValue < comparisonValue;
+                  else if (operator === '>=') conditionResult = fieldValue >= comparisonValue;
+                  else if (operator === '<=') conditionResult = fieldValue <= comparisonValue;
+                  else if (operator === '==') conditionResult = fieldValue === comparisonValue;
 
-                  // Follow the appropriate edge
-                  const nextEdge = workflowEdges.find((e: any) =>
-                    e.source === nodeId && e.sourceHandle === (conditionResult ? 'true' : 'false')
-                  );
-                  nodeId = nextEdge?.target;
+                  step.result = conditionResult;
+                  step.evaluation = `$${fieldValue} ${operator} $${comparisonValue} → ${conditionResult}`;
+
+                  const nextNodeId = getEdgeTarget(nodeId, conditionResult ? 'true' : 'false');
+                  nodeId = nextNodeId || getFirstEdgeTarget(nodeId);
+                } else if (node.type === 'generatePO' || node.type === 'checkBudget' || node.type === 'notifyVendor' || node.type === 'threeWayMatch') {
+                  // Use custom handlers for procurement nodes
+                  try {
+                    const handlerResult = await executeNode(node.type, { requisition, supplier: requisition.supplier }, node.data || {});
+                    step.result = handlerResult;
+                    step.status = 'completed';
+                  } catch (e) {
+                    step.result = { error: (e as Error).message };
+                    step.status = 'error';
+                  }
+                  nodeId = getFirstEdgeTarget(nodeId);
+                } else if (node.type === 'human') {
+                  // Human review — mark as pending approval
+                  step.status = 'pending_approval';
+                  step.instructions = node.data?.instructions;
+                  // Don't advance — human must approve
+                  nodeId = null;
                 } else {
-                  // Follow the default edge
-                  const nextEdge = workflowEdges.find((e: any) => e.source === nodeId);
-                  nodeId = nextEdge?.target;
+                  // Default: follow first outgoing edge
+                  nodeId = getFirstEdgeTarget(nodeId);
                 }
 
                 executionPath.push(step);
@@ -1347,7 +1388,7 @@ Respond in JSON:
                 workflow_id: args.workflow_id || 'default',
                 execution_path: executionPath,
                 total_steps: executionPath.length,
-                status: 'executed',
+                status: executionPath.some((s: any) => s.status === 'pending_approval') ? 'awaiting_approval' : 'executed',
                 message: `Workflow executed through ${executionPath.length} steps.`
               });
             }
