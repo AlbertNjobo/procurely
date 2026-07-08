@@ -23,7 +23,8 @@ const routeNames: Record<string, string> = {
 
 export function AppBreadcrumb() {
   const location = useLocation();
-  const pathname = location.pathname;
+  // Routes are mounted under /app/*, so strip that prefix for lookups
+  const pathname = location.pathname.replace(/^\/app/, '') || '/';
 
   const isTracker = pathname.startsWith('/tracker/');
   

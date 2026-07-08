@@ -202,7 +202,7 @@ function AppLayout() {
         </div>
       </header>
       
-      <main className="flex-1 overflow-auto bg-muted/20">
+      <main className="flex-1 flex flex-col overflow-hidden bg-muted/20 min-h-0">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/suppliers" element={<Suppliers />} />

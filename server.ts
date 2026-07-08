@@ -3,7 +3,6 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import OpenAI from "openai";
 import "dotenv/config";
-import { executeNode, type WorkflowHandlerContext } from "./src/lib/workflow-handlers";
 import { agentTools } from "./src/lib/agent-tools";
 import { chunkText, chunkTextSmart, generateEmbeddings, generateQueryEmbedding, rerankResults } from "./src/lib/rag";
 import { initZvecStore, insertChunks, searchChunks as zvecSearch, insertMemory, searchMemories } from "./src/lib/zvec-store";
@@ -47,6 +46,42 @@ initZvecStore();
 // API Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+// ============================================================================
+// Workflow Execution Endpoints
+// ============================================================================
+
+// Execute a workflow directly
+app.post("/api/workflows/run", async (req, res) => {
+  try {
+    const { nodes, inputs, userId, workflowId } = req.body;
+    if (!nodes?.length) {
+      return res.status(400).json({ error: "nodes array is required" });
+    }
+    const { executeWorkflow } = await import("./src/lib/workflow-engine");
+    const result = await executeWorkflow(nodes, req.body.edges || [], inputs || {}, { userId }, { workflowId });
+    res.json(result);
+  } catch (error) {
+    console.error("Workflow execution error:", error);
+    res.status(500).json({ error: "Execution failed", details: (error as Error).message });
+  }
+});
+
+// Execute a saved workflow from localStorage key
+app.post("/api/workflows/run-saved", async (req, res) => {
+  try {
+    const { savedWorkflow, inputs, userId } = req.body;
+    if (!savedWorkflow?.nodes?.length) {
+      return res.status(400).json({ error: "savedWorkflow with nodes is required" });
+    }
+    const { executeWorkflow } = await import("./src/lib/workflow-engine");
+    const result = await executeWorkflow(savedWorkflow.nodes, savedWorkflow.edges || [], inputs || {}, { userId });
+    res.json(result);
+  } catch (error) {
+    console.error("Saved workflow execution error:", error);
+    res.status(500).json({ error: "Execution failed", details: (error as Error).message });
+  }
 });
 
 // ============================================================================
@@ -568,7 +603,7 @@ IMPORTANT: NEVER combine Qualifying, Recommending, and Intake Form phases. You M
       const toolCallsAccumulator: Record<number, any> = {};
 
       const stream = await openai.chat.completions.create({
-        model: model || "qwen3.5-plus",
+        model: model || "qwen3.7-plus",
         messages: currentMessages,
         tools: agentTools as any,
         stream: true,
@@ -1288,11 +1323,26 @@ Respond in JSON:
               result = JSON.stringify({ error: "Market research failed", fallback: "Use web search to find pricing." });
             }
           } else if (tc.name === 'execute_workflow') {
-            // Execute a workflow step — supports both Wayflow and legacy ReactFlow formats
+            // Execute a workflow step
             const workflowNodes = context?.workflowNodes || [];
             const workflowEdges = context?.workflowEdges || [];
-            const requisition = (context?.purchaseRequisitions || []).find((r: any) => r.id === args.requisition_id) ||
-                               (context?.intakes || []).find((i: any) => i.id === args.requisition_id) || {};
+            const activeWorkflowId = context?.activeWorkflowId;
+
+            // Find the requisition — use args.requisition_id if provided, otherwise use the first one
+            const requisition = args.requisition_id
+              ? (context?.purchaseRequisitions || []).find((r: any) => r.id === args.requisition_id) ||
+                (context?.intakes || []).find((i: any) => i.id === args.requisition_id) || {}
+              : (context?.purchaseRequisitions || [])[0] || (context?.intakes || [])[0] || {};
+
+            // Build workflow data from real requisition
+            const workflowData: Record<string, any> = {
+              amount: parseFloat(String(requisition.totalAmount || requisition.amount || '0').replace(/[^0-9.]/g, '')),
+              department: requisition.department || requisition.costCenter || '',
+              category: requisition.category || '',
+              vendor: requisition.supplier || '',
+              riskLevel: requisition.riskLevel || 'Low',
+              priority: requisition.priority || 'Medium',
+            };
 
             // Detect format: Wayflow edges use sourceNodeId/targetNodeId, legacy uses source/target
             const isWayflowFormat = workflowEdges.length > 0 && workflowEdges[0]?.sourceNodeId !== undefined;
@@ -1340,33 +1390,61 @@ Respond in JSON:
 
                 // Handle different node types
                 if (node.type === 'condition' || node.type === 'conditional') {
-                  // Wayflow conditional: uses inputField, operator, comparisonValue
-                  const inputField = node.data?.inputField || 'amount';
-                  const operator = node.data?.operator || '>';
-                  const comparisonValue = parseFloat(node.data?.comparisonValue || node.data?.threshold || '10000');
-                  const fieldValue = parseFloat(String(requisition[inputField] || requisition.amount || '0').replace(/[^0-9.]/g, ''));
-                  let conditionResult = false;
-                  if (operator === '>') conditionResult = fieldValue > comparisonValue;
-                  else if (operator === '<') conditionResult = fieldValue < comparisonValue;
-                  else if (operator === '>=') conditionResult = fieldValue >= comparisonValue;
-                  else if (operator === '<=') conditionResult = fieldValue <= comparisonValue;
-                  else if (operator === '==') conditionResult = fieldValue === comparisonValue;
+                  const condType = node.data?.conditionType || 'amount_threshold';
 
-                  step.result = conditionResult;
-                  step.evaluation = `$${fieldValue} ${operator} $${comparisonValue} → ${conditionResult}`;
+                  if (condType === 'amount_threshold') {
+                    const threshold = parseFloat(node.data?.threshold || '10000');
+                    const operator = node.data?.operator || '>';
+                    const fieldValue = workflowData.amount || 0;
+                    let conditionResult = false;
+                    if (operator === '>') conditionResult = fieldValue > threshold;
+                    else if (operator === '<') conditionResult = fieldValue < threshold;
+                    else if (operator === '>=') conditionResult = fieldValue >= threshold;
+                    else if (operator === '<=') conditionResult = fieldValue <= threshold;
+                    else if (operator === '==') conditionResult = fieldValue === threshold;
+                    step.result = conditionResult;
+                    step.evaluation = `$${fieldValue} ${operator} $${threshold} → ${conditionResult}`;
+                  } else if (condType === 'department_match') {
+                    const target = (node.data?.departmentMatch || '').toLowerCase();
+                    const actual = (workflowData.department || '').toLowerCase();
+                    step.result = actual.includes(target);
+                    step.evaluation = `Department "${workflowData.department}" matches "${node.data?.departmentMatch}" → ${step.result}`;
+                  } else if (condType === 'category_match') {
+                    const target = (node.data?.categoryMatch || '').toLowerCase();
+                    const actual = (workflowData.category || '').toLowerCase();
+                    step.result = actual.includes(target);
+                    step.evaluation = `Category "${workflowData.category}" matches "${node.data?.categoryMatch}" → ${step.result}`;
+                  } else if (condType === 'risk_level') {
+                    const maxRisk = node.data?.maxRiskLevel || 'Medium';
+                    const riskOrder: Record<string, number> = { 'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4 };
+                    const actual = riskOrder[workflowData.riskLevel as string] || 1;
+                    const max = riskOrder[maxRisk] || 2;
+                    step.result = actual <= max;
+                    step.evaluation = `Risk "${workflowData.riskLevel}" ≤ "${maxRisk}" → ${step.result}`;
+                  } else if (condType === 'vendor_check') {
+                    const target = (node.data?.vendorMatch || '').toLowerCase();
+                    const actual = (workflowData.vendor || '').toLowerCase();
+                    step.result = actual.includes(target);
+                    step.evaluation = `Vendor "${workflowData.vendor}" matches "${node.data?.vendorMatch}" → ${step.result}`;
+                  } else {
+                    step.result = true;
+                    step.evaluation = 'Condition passed (default)';
+                  }
 
+                  const conditionResult = step.result as boolean;
                   const nextNodeId = getEdgeTarget(nodeId, conditionResult ? 'true' : 'false');
                   nodeId = nextNodeId || getFirstEdgeTarget(nodeId);
                 } else if (node.type === 'generatePO' || node.type === 'checkBudget' || node.type === 'notifyVendor' || node.type === 'threeWayMatch') {
-                  // Use custom handlers for procurement nodes
-                  try {
-                    const handlerResult = await executeNode(node.type, { requisition, supplier: requisition.supplier }, node.data || {});
-                    step.result = handlerResult;
-                    step.status = 'completed';
-                  } catch (e) {
-                    step.result = { error: (e as Error).message };
-                    step.status = 'error';
-                  }
+                  // Custom procurement nodes — use real requisition data
+                  step.result = {
+                    type: node.type,
+                    label: node.label,
+                    requisition_id: requisition.id,
+                    amount: workflowData.amount,
+                    department: workflowData.department,
+                    vendor: workflowData.vendor,
+                  };
+                  step.status = 'completed';
                   nodeId = getFirstEdgeTarget(nodeId);
                 } else if (node.type === 'human') {
                   // Human review — mark as pending approval

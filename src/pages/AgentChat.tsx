@@ -829,7 +829,7 @@ export function AgentChat() {
   const [kbContext, setKbContext] = useState('');
   const [useContext, setUseContext] = useState(() => localStorage.getItem('kb-context-enabled') !== 'false');
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('chat-model-qwen') || 'qwen3.5-plus');
+  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('chat-model-qwen') || 'qwen3.7-plus');
 
   useEffect(() => {
     localStorage.setItem('chat-model-qwen', selectedModel);
@@ -1009,21 +1009,24 @@ export function AgentChat() {
     try {
       let apiMessages = messages.filter(m => m.type === 'text' || !m.type).concat(userMessage).map(m => ({ role: m.role, parts: [{ text: m.content }] }));
       
-      // Load workflow from localStorage (saved by Wayflow WorkflowDesigner)
+      // Load workflow from localStorage (saved by WorkflowDesigner)
       let workflowNodes: any[] = [];
       let workflowEdges: any[] = [];
+      let activeWorkflowId: string | null = null;
       try {
-        const savedWorkflow = localStorage.getItem('wayflow-workflow-autosave');
-        if (savedWorkflow) {
-          const parsed = JSON.parse(savedWorkflow);
-          // Wayflow stores Graph format: { nodes: Record<string, Node>, edges: Record<string, Edge> }
-          if (parsed.nodes && typeof parsed.nodes === 'object' && !Array.isArray(parsed.nodes)) {
-            workflowNodes = Object.values(parsed.nodes);
-            workflowEdges = Object.values(parsed.edges || {});
-          } else if (Array.isArray(parsed.nodes)) {
-            // Legacy ReactFlow format fallback
-            workflowNodes = parsed.nodes;
-            workflowEdges = parsed.edges || [];
+        const savedWorkflows = localStorage.getItem('workflow-list');
+        if (savedWorkflows) {
+          const list = JSON.parse(savedWorkflows);
+          if (Array.isArray(list) && list.length > 0) {
+            // Pick the most recently updated ACTIVE workflow
+            const active = list
+              .filter((w: any) => w.active !== false)
+              .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+            if (active.length > 0) {
+              workflowNodes = active[0].nodes || [];
+              workflowEdges = active[0].edges || [];
+              activeWorkflowId = active[0].id;
+            }
           }
         }
       } catch (e) {
@@ -1044,6 +1047,7 @@ export function AgentChat() {
             agentMemory: agentMemory.slice(0, 20),
             workflowNodes,
             workflowEdges,
+            activeWorkflowId,
             userId: user?.uid,
             knowledgeBase: useContext ? knowledgeBase : undefined
           }
@@ -1659,23 +1663,73 @@ export function AgentChat() {
                   <span className="font-medium">{selectedModel}</span>
                   <ChevronDown className="h-3 w-3 opacity-60" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48 bg-popover text-popover-foreground border border-zinc-200 dark:border-zinc-800 shadow-md">
+                <DropdownMenuContent align="start" className="w-56 bg-popover text-popover-foreground border border-zinc-200 dark:border-zinc-800 shadow-md max-h-[400px] overflow-y-auto">
+                  {/* Qwen Flagship */}
+                  <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Qwen Flagship</div>
+                  <DropdownMenuItem onClick={() => setSelectedModel('qwen3.7-max')} className="cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-xs text-foreground">qwen3.7-max</span>
+                      <span className="text-[10px] text-muted-foreground">Maximum Performance</span>
+                    </div>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSelectedModel('qwen3.7-plus')} className="cursor-pointer">
                     <div className="flex flex-col">
                       <span className="font-semibold text-xs text-foreground">qwen3.7-plus</span>
-                      <span className="text-[10px] text-muted-foreground">Flagship High-Performance</span>
+                      <span className="text-[10px] text-muted-foreground">High-Performance</span>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSelectedModel('qwen3.5-plus')} className="cursor-pointer">
                     <div className="flex flex-col">
                       <span className="font-semibold text-xs text-foreground">qwen3.5-plus</span>
-                      <span className="text-[10px] text-muted-foreground">Flagship Balanced</span>
+                      <span className="text-[10px] text-muted-foreground">Balanced</span>
                     </div>
                   </DropdownMenuItem>
+
+                  {/* Qwen Fast */}
+                  <div className="px-2 py-1 mt-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-t border-zinc-200 dark:border-zinc-800">Qwen Fast</div>
                   <DropdownMenuItem onClick={() => setSelectedModel('qwen3.6-flash')} className="cursor-pointer">
                     <div className="flex flex-col">
                       <span className="font-semibold text-xs text-foreground">qwen3.6-flash</span>
                       <span className="text-[10px] text-muted-foreground">Fast & Cost-Efficient</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedModel('qwen3.6-plus')} className="cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-xs text-foreground">qwen3.6-plus</span>
+                      <span className="text-[10px] text-muted-foreground">Preview Model</span>
+                    </div>
+                  </DropdownMenuItem>
+
+                  {/* Third-Party */}
+                  <div className="px-2 py-1 mt-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-t border-zinc-200 dark:border-zinc-800">Third-Party Models</div>
+                  <DropdownMenuItem onClick={() => setSelectedModel('glm-5.2')} className="cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-xs text-foreground">glm-5.2</span>
+                      <span className="text-[10px] text-muted-foreground">Zhipu AI</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedModel('deepseek-v4-pro')} className="cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-xs text-foreground">deepseek-v4-pro</span>
+                      <span className="text-[10px] text-muted-foreground">DeepSeek Pro</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedModel('deepseek-v4-flash')} className="cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-xs text-foreground">deepseek-v4-flash</span>
+                      <span className="text-[10px] text-muted-foreground">DeepSeek Fast</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedModel('MiniMax-M2.7')} className="cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-xs text-foreground">MiniMax-M2.7</span>
+                      <span className="text-[10px] text-muted-foreground">MiniMax</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedModel('mimo-v2.5-pro')} className="cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-xs text-foreground">mimo-v2.5-pro</span>
+                      <span className="text-[10px] text-muted-foreground">Xiaomi MiMo</span>
                     </div>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

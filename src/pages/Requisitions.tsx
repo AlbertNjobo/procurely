@@ -223,6 +223,31 @@ export function Requisitions() {
       
       await logAuditEvent('Created Requisition', docRef.id, 'purchaseRequisitions', null, newReq, auth.currentUser.uid);
 
+      // Fire workflow triggers for on_requisition event
+      try {
+        const savedWorkflows = localStorage.getItem('workflow-list');
+        if (savedWorkflows) {
+          const list = JSON.parse(savedWorkflows);
+          const matchingWorkflows = list.filter((w: any) => w.active && w.trigger === 'on_requisition');
+          for (const wf of matchingWorkflows) {
+            await fetch('/api/workflows/run', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                nodes: wf.nodes,
+                edges: wf.edges,
+                inputs: { amount, department: newReq.costCenter, category: newReq.category, vendor: '' },
+                userId: auth.currentUser.uid,
+                workflowId: wf.id,
+                requisitionId: docRef.id,
+              }),
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Workflow trigger failed:', e);
+      }
+
       toast.success(`Requisition created and routed to ${initialStatus}`);
       setIsNewRequestOpen(false);
       clearAutoSave();
