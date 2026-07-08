@@ -108,4 +108,5 @@ lerna-debug.log*
 .agents/
 .mimocode/
 data/
+.kimchi/
 archify/
