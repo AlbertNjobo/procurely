@@ -1014,27 +1014,6 @@ Respond in valid JSON with keys: comparison (array), winning_supplier, reasoning
                 custom_placeholder: q.custom_placeholder || "Type your answer..."
               }))
             });
-            // Search agent memory for relevant past interactions
-            const memories = context?.agentMemory || [];
-            let filtered = memories;
-            if (args.memory_type && args.memory_type !== 'all') {
-              filtered = memories.filter((m: any) => m.type === args.memory_type);
-            }
-            // Simple keyword search as fallback if no embeddings
-            const queryLower = (args.query || '').toLowerCase();
-            const matched = filtered.filter((m: any) =>
-              (m.content || '').toLowerCase().includes(queryLower)
-            ).slice(0, 5);
-            result = JSON.stringify({
-              query: args.query,
-              found: matched.length,
-              memories: matched.map((m: any) => ({
-                type: m.type,
-                content: m.content,
-                metadata: m.metadata,
-                createdAt: m.createdAt
-              }))
-            });
           } else if (tc.name === 'store_memory') {
             // Generate embedding for the memory content
             let embedding: number[] = [];
@@ -1596,6 +1575,16 @@ Respond in JSON:
             content: result
           });
         }
+
+        // Break loop if any interactive tool was executed (requires user input before continuing)
+        const hasInteractiveTool = toolCallsMade.some(tc =>
+          tc.name === 'present_qualification_questions' ||
+          tc.name === 'ask_form_questions' ||
+          tc.name === 'request_approval' ||
+          tc.name === 'suggest_procurement_items' ||
+          tc.name === 'suggest_vendors'
+        );
+        if (hasInteractiveTool) break;
       } else {
         break;
       }
