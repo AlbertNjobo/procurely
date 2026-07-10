@@ -116,3 +116,15 @@ service-account.json
 data/
 .kimchi/
 archify/
+
+# Generated architecture files
+architecture.architecture.json
+
+# IDE-specific
+assets/.aistudio/
+
+# Image exports from docs
+docs/procurely-ai-procurement-agent*
+
+# Compose skill output
+docs/compose/
