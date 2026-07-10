@@ -236,12 +236,12 @@ async function webSearch(query: string): Promise<string> {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
+    const timeout = setTimeout(() => controller.abort(), 75000);
     const response = await fetch("https://dashscope-intl.aliyuncs.com/compatible-mode/v1/responses", {
       method: "POST",
       headers: { "Authorization": `Bearer ${process.env.QWEN_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "qwen3.6-flash",
+        model: "qwen3.5-plus-2026-02-15",
         input: query,
         tools: [{ type: "web_search" }]
       }),
