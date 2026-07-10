@@ -84,7 +84,7 @@ The app runs at `http://localhost:3000`. Sign in with Firebase Auth. On first lo
 ## Architecture
 
 <p align="center">
-  <img src="docs/procurely-ai-procurement-agent(5).png" alt="Procurely Architecture" width="100%">
+  <img src="docs/architecture-dark.png" alt="Procurely Architecture" width="100%">
 </p>
 
 ```
