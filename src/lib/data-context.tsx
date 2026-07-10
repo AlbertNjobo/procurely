@@ -42,10 +42,26 @@ const initialIntakes = [
 ];
 
 const initialSuppliers = [
-  { id: 'SUP-001', name: 'Amazon Web Services', category: 'IT Software', risk: 'Low', status: 'Active', compliance: true, contact_email: 'lawrencenjobo9@gmail.com', contact_name: 'Lawrence Njobo' },
-  { id: 'SUP-002', name: 'Stripe Inc.', category: 'Financial Services', risk: 'Low', status: 'Active', compliance: true, contact_email: 'lawrencenjobo8@gmail.com', contact_name: 'Lawrence Njobo' },
-  { id: 'SUP-003', name: 'Acme Corp', category: 'Hardware', risk: 'Medium', status: 'Onboarding', compliance: false, contact_email: 'theayloe@gmail.com', contact_name: 'Thea Yloe' },
-  { id: 'SUP-004', name: 'Global Logistics LLC', category: 'Logistics', risk: 'High', status: 'Under Review', compliance: false, contact_email: 'n02212525l@students.nust.ac.zw', contact_name: 'NUST Student' },
+  { id: 'SUP-001', name: 'Amazon Web Services', category: 'Cloud Infrastructure', risk: 'Low', status: 'Active', compliance: true, contact_email: 'procurement@aws.example.com', contact_name: 'AWS Sales' },
+  { id: 'SUP-002', name: 'Microsoft Azure', category: 'Cloud Infrastructure', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@microsoft.example.com', contact_name: 'Azure Enterprise' },
+  { id: 'SUP-003', name: 'Google Cloud Platform', category: 'Cloud Infrastructure', risk: 'Low', status: 'Active', compliance: true, contact_email: 'cloud@google.example.com', contact_name: 'GCP Sales' },
+  { id: 'SUP-004', name: 'Dell Technologies', category: 'Hardware', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@dell.example.com', contact_name: 'Dell Enterprise' },
+  { id: 'SUP-005', name: 'Lenovo', category: 'Hardware', risk: 'Low', status: 'Active', compliance: true, contact_email: 'business@lenovo.example.com', contact_name: 'Lenovo Business' },
+  { id: 'SUP-006', name: 'HP Inc.', category: 'Hardware', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@hp.example.com', contact_name: 'HP Enterprise' },
+  { id: 'SUP-007', name: 'Cisco Systems', category: 'Networking', risk: 'Low', status: 'Active', compliance: true, contact_email: 'sales@cisco.example.com', contact_name: 'Cisco Sales' },
+  { id: 'SUP-008', name: 'CrowdStrike', category: 'Cybersecurity', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@crowdstrike.example.com', contact_name: 'CrowdStrike Enterprise' },
+  { id: 'SUP-009', name: 'Salesforce', category: 'SaaS / CRM', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@salesforce.example.com', contact_name: 'Salesforce Enterprise' },
+  { id: 'SUP-010', name: 'Slack Technologies', category: 'SaaS / Collaboration', risk: 'Low', status: 'Active', compliance: true, contact_email: 'sales@slack.example.com', contact_name: 'Slack Sales' },
+  { id: 'SUP-011', name: 'Stripe Inc.', category: 'Financial Services', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@stripe.example.com', contact_name: 'Stripe Enterprise' },
+  { id: 'SUP-012', name: 'Snowflake', category: 'Data & Analytics', risk: 'Low', status: 'Active', compliance: true, contact_email: 'sales@snowflake.example.com', contact_name: 'Snowflake Sales' },
+  { id: 'SUP-013', name: 'Datadog', category: 'Monitoring & Observability', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@datadog.example.com', contact_name: 'Datadog Enterprise' },
+  { id: 'SUP-014', name: 'MongoDB', category: 'Database', risk: 'Low', status: 'Active', compliance: true, contact_email: 'sales@mongodb.example.com', contact_name: 'MongoDB Sales' },
+  { id: 'SUP-015', name: 'Twilio', category: 'Communications API', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@twilio.example.com', contact_name: 'Twilio Enterprise' },
+  { id: 'SUP-016', name: 'Okta', category: 'Identity & Access Management', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@okta.example.com', contact_name: 'Okta Enterprise' },
+  { id: 'SUP-017', name: 'Atlassian', category: 'SaaS / DevTools', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@atlassian.example.com', contact_name: 'Atlassian Enterprise' },
+  { id: 'SUP-018', name: 'GitLab', category: 'SaaS / DevTools', risk: 'Low', status: 'Active', compliance: true, contact_email: 'sales@gitlab.example.com', contact_name: 'GitLab Sales' },
+  { id: 'SUP-019', name: 'Elastic', category: 'Data & Analytics', risk: 'Medium', status: 'Active', compliance: true, contact_email: 'enterprise@elastic.example.com', contact_name: 'Elastic Enterprise' },
+  { id: 'SUP-020', name: 'Cloudflare', category: 'Cloud Infrastructure', risk: 'Low', status: 'Active', compliance: true, contact_email: 'enterprise@cloudflare.example.com', contact_name: 'Cloudflare Enterprise' },
 ];
 
 const initialProcurementCatalogItems = [

@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '../lib/auth-context';
 import { executeWorkflow, getExecutionLogs, type ExecutionLog } from '../lib/workflow-engine';
+import { apiFetch } from '../lib/api';
 import { TriggerManager } from '../components/TriggerManager';
 import { loadTriggers, saveTriggers, type WorkflowTrigger } from '../lib/workflow-triggers';
 
@@ -537,9 +538,8 @@ const Designer = ({ workflowId, onSave }: { workflowId: string | null; onSave: (
     setIsRunning(true);
 
     try {
-      const res = await fetch('/api/workflows/run', {
+      const res = await apiFetch('/api/workflows/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nodes, edges, inputs: { amount: '5000' } }),
       });
       const result = await res.json();

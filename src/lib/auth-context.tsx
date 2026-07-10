@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               uid: u.uid,
               email: u.email,
               displayName: u.displayName,
-              role: 'Requestor'
+              role: 'Admin'
             };
             await setDoc(userRef, newProfile);
             setProfile(newProfile);

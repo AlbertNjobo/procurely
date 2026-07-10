@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { apiFetch } from '../lib/api';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Bot, User, Send, FileText, CheckCircle, Paperclip, Table as TableIcon, Activity, Upload, ChevronDown, ChevronUp, AlertCircle, Loader2, Mic, Square, ListChecks, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeft, Search } from 'lucide-react';
 import { useAuth } from '../lib/auth-context';
@@ -938,9 +939,8 @@ export function AgentChat() {
           const base64data = (reader.result as string).split(',')[1];
           try {
             toast.info("Transcribing audio...", { id: 'transcribe' });
-            const response = await fetch('/api/agent/transcribe', {
+            const response = await apiFetch('/api/agent/transcribe', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ audioData: base64data, format })
             });
             if (response.ok) {
@@ -1033,9 +1033,8 @@ export function AgentChat() {
         console.warn('Failed to load workflow from localStorage:', e);
       }
 
-      const response = await fetch('/api/agent/chat', {
+      const response = await apiFetch('/api/agent/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: apiMessages,
           model: selectedModel,
@@ -1673,15 +1672,15 @@ export function AgentChat() {
                       <span className="text-[10px] text-muted-foreground">Maximum Performance</span>
                     </div>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSelectedModel('qwen3.7-plus')} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => setSelectedModel('qwen3.7-max-2026-06-08')} className="cursor-pointer">
                     <div className="flex flex-col">
-                      <span className="font-semibold text-xs text-foreground">qwen3.7-plus</span>
-                      <span className="text-[10px] text-muted-foreground">High-Performance</span>
+                      <span className="font-semibold text-xs text-foreground">qwen3.7-max-2026-06-08</span>
+                      <span className="text-[10px] text-muted-foreground">Maximum Performance</span>
                     </div>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSelectedModel('qwen3.5-plus')} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => setSelectedModel('qwen3.5-plus-2026-02-15')} className="cursor-pointer">
                     <div className="flex flex-col">
-                      <span className="font-semibold text-xs text-foreground">qwen3.5-plus</span>
+                      <span className="font-semibold text-xs text-foreground">qwen3.5-plus-2026-02-15</span>
                       <span className="text-[10px] text-muted-foreground">Balanced</span>
                     </div>
                   </DropdownMenuItem>

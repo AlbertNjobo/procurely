@@ -13,11 +13,25 @@ export async function seedDemoData(userId: string) {
   if (await collectionEmpty('suppliers')) {
     const suppliers = [
       { name: 'Amazon Web Services', category: 'Cloud Infrastructure', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Microsoft Azure', category: 'Cloud Infrastructure', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Google Cloud Platform', category: 'Cloud Infrastructure', risk: 'Low', status: 'Active', compliance: true, userId },
       { name: 'Dell Technologies', category: 'Hardware', risk: 'Low', status: 'Active', compliance: true, userId },
-      { name: 'Salesforce', category: 'SaaS / CRM', risk: 'Medium', status: 'Active', compliance: true, userId },
-      { name: 'Global Logistics LLC', category: 'Logistics', risk: 'High', status: 'Under Review', compliance: false, userId },
-      { name: 'Creative Group Inc.', category: 'Marketing Services', risk: 'Medium', status: 'Onboarding', compliance: false, userId },
-      { name: 'Office Depot Business', category: 'Office Supplies', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Lenovo', category: 'Hardware', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'HP Inc.', category: 'Hardware', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Cisco Systems', category: 'Networking', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'CrowdStrike', category: 'Cybersecurity', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Salesforce', category: 'SaaS / CRM', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Slack Technologies', category: 'SaaS / Collaboration', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Stripe Inc.', category: 'Financial Services', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Snowflake', category: 'Data & Analytics', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Datadog', category: 'Monitoring & Observability', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'MongoDB', category: 'Database', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Twilio', category: 'Communications API', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Okta', category: 'Identity & Access Management', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Atlassian', category: 'SaaS / DevTools', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'GitLab', category: 'SaaS / DevTools', risk: 'Low', status: 'Active', compliance: true, userId },
+      { name: 'Elastic', category: 'Data & Analytics', risk: 'Medium', status: 'Active', compliance: true, userId },
+      { name: 'Cloudflare', category: 'Cloud Infrastructure', risk: 'Low', status: 'Active', compliance: true, userId },
     ];
     for (const s of suppliers) batches.push(addDoc(collection(db, 'suppliers'), s).then(() => {}));
   }

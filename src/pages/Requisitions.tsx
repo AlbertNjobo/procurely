@@ -5,6 +5,7 @@ import { updateDoc, doc, addDoc, collection, getDoc } from 'firebase/firestore';
 import { useData } from '../lib/data-context';
 import { db, auth } from '../lib/firebase';
 import { logAuditEvent } from '../lib/audit';
+import { apiFetch } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -230,9 +231,8 @@ export function Requisitions() {
           const list = JSON.parse(savedWorkflows);
           const matchingWorkflows = list.filter((w: any) => w.active && w.trigger === 'on_requisition');
           for (const wf of matchingWorkflows) {
-            await fetch('/api/workflows/run', {
+            await apiFetch('/api/workflows/run', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 nodes: wf.nodes,
                 edges: wf.edges,

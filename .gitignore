@@ -95,11 +95,17 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # ==============================================================================
-# Local Scratch / Test Scripts (Optional)
+# Local Scratch / Test Scripts
 # ==============================================================================
-# Un-comment the lines below if you don't want to commit your local firestore/ASR test scripts
-# test-firestore*
-# test_asr.js
+test-firestore*
+test_asr.js
+
+# Patch scripts (changes already applied to source)
+patch_*.cjs
+
+# Firebase service account key
+service-account.json
+
 .aidesigner/*
 !.aidesigner/.gitkeep
 

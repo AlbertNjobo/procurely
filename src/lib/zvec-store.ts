@@ -2,7 +2,10 @@ import { ZVecCreateAndOpen, ZVecCollectionSchema, ZVecDataType, ZVecIndexType, Z
 import path from "path";
 import fs from "fs";
 
-const DATA_DIR = process.env.ZVEC_DATA_DIR || path.join(process.cwd(), "data", "zvec");
+// Schema version — bump this to force fresh data on schema changes
+const SCHEMA_VERSION = "v1";
+const BASE_DIR = process.env.ZVEC_DATA_DIR || path.join(process.cwd(), "data", "zvec");
+const DATA_DIR = path.join(BASE_DIR, SCHEMA_VERSION);
 
 let kbCollection: any = null;
 let memoryCollection: any = null;
@@ -12,11 +15,14 @@ let memoryCollection: any = null;
 // ============================================================================
 export function initZvecStore() {
   try {
-    // If data dir exists from a previous schema, remove it to avoid conflicts
+    // ZVecCreateAndOpen requires the path to not exist.
+    // Clean existing data so we can recreate with the current schema.
+    // Bump SCHEMA_VERSION above to invalidate stale data.
     if (fs.existsSync(DATA_DIR)) {
       fs.rmSync(DATA_DIR, { recursive: true, force: true });
-      console.log("[Zvec] Cleared old data directory for fresh schema");
+      console.log("[Zvec] Cleared data directory for fresh schema");
     }
+    fs.mkdirSync(DATA_DIR, { recursive: true });
 
     const kbSchema = new ZVecCollectionSchema({
       name: "kb_chunks",

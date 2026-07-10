@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import ReactMarkdown from 'react-markdown';
+import { apiFetch } from '../lib/api';
 
 interface KnowledgeDocument {
   id: string;
@@ -116,9 +117,8 @@ export function KnowledgeBase() {
       // Auto-classify using AI
       let summaryStr = undefined;
       try {
-        const response = await fetch('/api/documents/classify', {
+        const response = await apiFetch('/api/documents/classify', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text, fileName: file.name })
         });
         const data = await response.json();
@@ -171,9 +171,8 @@ export function KnowledgeBase() {
       // Generate embeddings and store in Zvec
       try {
         toast.info('Generating embeddings for semantic search...');
-        const embedResponse = await fetch('/api/kb/embed', {
+        const embedResponse = await apiFetch('/api/kb/embed', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             docId: docRef.id,
             title: pendingUpload.title,
@@ -224,9 +223,8 @@ export function KnowledgeBase() {
 
       // Generate embeddings and store in Zvec
       try {
-        const embedResponse = await fetch('/api/kb/embed', {
+        const embedResponse = await apiFetch('/api/kb/embed', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             docId: docRef.id,
             title: instructionTitle,

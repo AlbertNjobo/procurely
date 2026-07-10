@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../../lib/auth-context';
 import { useData } from '../../lib/data-context';
+import { apiFetch } from '../../lib/api';
 
 interface ToolCall {
   name: string;
@@ -155,10 +156,9 @@ For a supplier, you need to ultimately gather: name, category, contact_email, an
 IMPORTANT: Do NOT ask the user for confirmation before creating the request. Once you have all the required information, immediately call the ${contextType === 'intake' ? 'create_intake_request' : 'create_supplier'} function. The UI will present an interactive card for the user to review and confirm.`;
 
     try {
-      const response = await fetch('/api/agent/chat', {
+      const response = await apiFetch('/api/agent/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           messages: [{role: 'system', content: systemInstruction}, ...messages, userMessage].map(m => ({ role: m.role, parts: [{ text: m.content }] })),
           context: { knowledgeBase }
         })

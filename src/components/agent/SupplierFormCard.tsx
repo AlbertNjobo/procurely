@@ -31,7 +31,7 @@ export function SupplierFormCard() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue="k.nakamura@ignitexp.com" />
+              <Input id="email" type="email" defaultValue="contact@vendor.example.com" />
             </div>
           </div>
           

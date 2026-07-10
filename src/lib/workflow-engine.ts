@@ -3,6 +3,7 @@
  * Supports: rich conditions, multi-level approvals, manual step-through, execution logging
  */
 import { Node, Edge } from '@xyflow/react';
+import { apiFetch } from './api';
 
 // ===== Types =====
 
@@ -264,9 +265,8 @@ export async function executeWorkflow(
           let emailSent = false;
           let emailError = '';
           try {
-            const res = await fetch('/api/email/send', {
+            const res = await apiFetch('/api/email/send', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 type: 'po_notification',
                 to: [currentData.vendorEmail || 'vendor@example.com'],
