@@ -36,7 +36,11 @@ out/
 .firebase/
 firebase-debug.log
 ui-debug.log
-# Note: firebase-applet-config.json is committed (public web client keys only).
+# Firebase web client config is gitignored: it holds a public web API key, but we
+# keep it out of git to avoid GitHub secret-scanning alerts. For cloning, the app
+# falls back to firebase-applet-config.example.json; for local/deploy, copy:
+#   cp firebase-applet-config.example.json firebase-applet-config.json
+firebase-applet-config.json
 # Never commit service-account JSON or GOOGLE_APPLICATION_CREDENTIALS files.
 *-firebase-adminsdk-*.json
 service-account*.json
